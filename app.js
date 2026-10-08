@@ -180,86 +180,115 @@ function ingredientKeywordsFromRecipe(recipe){
   return [...new Set([...direct, ...suggestions].map(normalizeIngredientWord).filter(Boolean))];
 }
 
+/* ---------- OCR → lines (works with Tesseract.js v5 and v6) ---------- */
+function ocrResultToLines(result){
+  const d = result?.data || {};
+  let raw = d.lines && d.lines.length ? d.lines.map(l => ({...l, para: 0})) : [];
+  if (!raw.length && Array.isArray(d.blocks)) {
+    let p = 0;
+    raw = d.blocks.flatMap(b => (b.paragraphs || []).flatMap(par => {
+      p++;
+      return (par.lines || []).map(l => ({...l, para: p}));
+    }));
+  }
+  let lines = raw.map(l => ({
+    text: (l.text || '').replace(/[ \t]+/g, ' ').trim(),
+    confidence: Number(l.confidence || 0),
+    height: Math.max(1, (l.bbox?.y1 || 0) - (l.bbox?.y0 || 0)),
+    x: l.bbox?.x0 || 0, y: l.bbox?.y0 || 0,
+    para: l.para || 0
+  })).filter(l => l.text);
 
-/* v2.1 — OCR "Använd text" auto-field parser */
-function cleanOcrLine(s=""){
-  return s.replace(/\s+/g," ").replace(/[|¦]+/g," ").trim();
+  if (!lines.length) {
+    return cleanOCRLines(d.text || '').filter(Boolean)
+      .map(text => ({text, confidence: 50, height: 20, x: 0, y: 0, para: 0}));
+  }
+  const hs = lines.map(l => l.height).sort((a, b) => a - b);
+  const median = hs[Math.floor(hs.length / 2)] || 1;
+  const filtered = lines.filter(l => l.confidence >= 32 && (l.height >= median * 0.52 || l.text.length >= 55));
+  // Keep Tesseract's reading order — it already handles columns. Do NOT re-sort by y.
+  return filtered.length >= Math.max(3, Math.floor(lines.length * 0.45)) ? filtered : lines;
+}
+
+/* ---------- Edge noise: don't eat "225 C" ---------- */
+function cleanOCREdgeNoise(line){
+  let s = (line || '').replace(/[ \t]+/g, ' ').replace(/\s+([,.;:!?])/g, '$1').trim();
+  s = s.replace(/^([A-ZÅÄÖ])\s+(?=[A-Za-zÅÄÖåäö]{2})/u, '');
+  // Only strip a trailing lone capital after a letter — never after a digit or °.
+  s = s.replace(/(?<=[A-Za-zÅÄÖåäö])\s+([A-ZÅÄÖ])$/u, '');
+  return s.trim();
+}
+
+/* ---------- Line classification ---------- */
+const OCR_UNIT = '(?:dl|cl|ml|l|g|hg|kg|mg|krm|tsk|msk|st|stycken?|pkt|paket|burkar?|förp|förpackning|påsar?|nypa|nypor|knippe|klyftor?|skivor?|bitar?)';
+const OCR_QTY  = '(?:ca\\.?\\s*)?(?:\\d+(?:[.,]\\d+)?(?:\\s*[-–]\\s*\\d+)?(?:\\s+\\d\\/\\d)?|\\d\\/\\d|[½¼¾⅓⅔⅛])';
+const QTY_LINE  = new RegExp(`^${OCR_QTY}\\s*(?:${OCR_UNIT}\\b)?`, 'i');
+const STEP_LINE = /^\d+[.)]\s+\p{L}/u;
+const NOT_INGREDIENT = /\b(grader|°|minuter|min\b|timmar?|portioner|personer)/i;
+const INSTR_HEADING = /^(gör så här|gor sa har|tillagning|instruktion(er)?|metod|så här gör du|sa har gor du|tillredning)\b/i;
+const INGR_HEADING  = /^(ingredienser(na)?|du behöver|du behover)\b/i;
+
+function isLikelyIngredient(line){
+  if (STEP_LINE.test(line) || NOT_INGREDIENT.test(line)) return false;
+  if (/^[-•*]\s+/.test(line)) return true;
+  if (QTY_LINE.test(line) && line.length <= 70) return true;
+  // Short, no full stop, mentions a known ingredient: "Salt och peppar", "Olja till stekning"
+  return line.length <= 40 && !/[.!?]$/.test(line) && looksLikeIngredientLine(line);
 }
 function looksLikeIngredientLine(line){
-  const l=normalizeIngredientWord(line);
-  if (!l || INGREDIENT_HEADINGS.test(line)) return false;
-  if (INGREDIENT_UNITS.test(line)) return true;
-  return SWEDISH_INGREDIENTS.some(x => new RegExp("(^|[^a-z0-9])"+normalizeIngredientWord(x).replace(/\s+/g,"\\s+")+"([^a-z0-9]|$)","i").test(l));
+  const l = normalizeIngredientWord(line);
+  return SWEDISH_INGREDIENTS.some(x =>
+    new RegExp('(^|[^a-z0-9])' + normalizeIngredientWord(x).replace(/\s+/g, '\\s+') + '([^a-z0-9]|$)').test(l));
 }
-function parseOcrIntoRecipeFields(text=""){
-  const raw=text.split(/\r?\n/).map(cleanOcrLine).filter(Boolean);
-  if (!raw.length) return {name:"", ingredients:"", instructions:"", ingredientKeywords:[], cookingMethods:[]};
+function joinHyphenated(lines){
+  const out = [];
+  for (const l of lines) {
+    const prev = out[out.length - 1];
+    if (prev && /[a-zåäö]-$/.test(prev.text) && /^[a-zåäö]/.test(l.text)) {
+      prev.text = prev.text.slice(0, -1) + l.text;
+    } else out.push({...l});
+  }
+  return out;
+}
 
-  // Remove obvious OCR junk, page numbers, and very short noise.
-  const lines=raw.filter(x => !/^(?:[|•·\-–—\d]{1,4})$/.test(x));
+/* ---------- Structure detection: takes line objects, not a string ---------- */
+function detectOCRStructure(lineObjs){
+  let lines = joinHyphenated(lineObjs)
+    .map(l => ({...l, text: cleanOCREdgeNoise(l.text)}))
+    .filter(l => !looksLikeNoise(l.text));
+  if (!lines.length) return {title: '', ingredients: [], instructions: []};
 
-  // Title: first meaningful line, unless it is an ingredient heading/quantity line.
-  let titleIndex=lines.findIndex((x,i)=>
-    i<4 &&
-    x.length>=3 &&
-    x.length<=100 &&
-    !INGREDIENT_HEADINGS.test(x) &&
-    !looksLikeIngredientLine(x) &&
-    !/^(?:instruktioner|gör så här|tillagning|så här gör du)\s*:?\s*$/i.test(x)
-  );
-  if(titleIndex<0) titleIndex=0;
-  const name=lines[titleIndex] || "";
+  // Title: tallest non-ingredient, non-heading line among the first 5.
+  const head = lines.slice(0, 5).map((l, i) => ({...l, i}))
+    .filter(l => l.text.length >= 3 && l.text.length <= 80 && !isSectionHeading(l.text)
+              && !isLikelyIngredient(l.text) && !STEP_LINE.test(l.text));
+  const titleObj = head.sort((a, b) => b.height - a.height)[0];
+  const title = titleObj?.text || '';
+  const rest = lines.filter((_, i) => i !== titleObj?.i).map(l => l.text);
 
-  const ingredientStart=lines.findIndex(x=>INGREDIENT_HEADINGS.test(x));
-  const instructionStart=lines.findIndex(x=>/^(?:instruktioner|gör så här|tillagning|så här gör du|metod|tillredning)\s*:?\s*$/i.test(x));
+  const iH = rest.findIndex(l => INGR_HEADING.test(normalize(l)) || INGR_HEADING.test(l));
+  const sH = rest.findIndex(l => INSTR_HEADING.test(l) || INSTR_HEADING.test(normalize(l)));
 
-  let ingredientsLines=[];
-  let instructionLines=[];
-
-  if(ingredientStart>=0){
-    const end=instructionStart>ingredientStart ? instructionStart : Math.min(lines.length, ingredientStart+30);
-    ingredientsLines=lines.slice(ingredientStart+1,end).filter(x=>x!==name);
-    if(instructionStart>=0) instructionLines=lines.slice(instructionStart+1);
-    else instructionLines=lines.slice(end);
+  let ingredients, instructions;
+  if (iH >= 0 && sH > iH) {
+    ingredients  = rest.slice(iH + 1, sH);
+    instructions = rest.slice(sH + 1);
+  } else if (sH >= 0 && iH > sH) {          // instructions printed first
+    instructions = rest.slice(sH + 1, iH);
+    ingredients  = rest.slice(iH + 1);
   } else {
-    // No heading: collect consecutive quantity/ingredient lines after title.
-    let i=Math.max(0,titleIndex+1);
-    while(i<lines.length && ingredientsLines.length<30 && looksLikeIngredientLine(lines[i])){
-      ingredientsLines.push(lines[i]); i++;
-    }
-    instructionLines=lines.slice(i);
+    // No reliable headings: classify every line.
+    const body = rest.filter(l => !isSectionHeading(l));
+    ingredients  = body.filter(isLikelyIngredient);
+    instructions = body.filter(l => !ingredients.includes(l));
   }
-
-  // If the OCR has no useful ingredient lines, build a clean ingredient list
-  // from detected candidates, while leaving the full OCR as instructions.
-  const candidates=suggestIngredientsFromOCR(lines.join("\n"));
-  if(!ingredientsLines.length && candidates.length){
-    ingredientsLines=candidates.map(x=>x.name);
-  }
-
-  // Normalize line joins so OCR doesn't concatenate separate rows.
-  ingredientsLines=ingredientsLines.map(cleanOcrLine).filter(Boolean);
-  instructionLines=instructionLines.map(cleanOcrLine).filter(Boolean);
-
-  // If instruction text is absent, retain the remaining OCR rather than losing data.
-  if(!instructionLines.length){
-    const used=new Set([name,...ingredientsLines]);
-    instructionLines=lines.filter(x=>!used.has(x));
-  }
-
-  const ingredientKeywords=[...new Set([
-    ...ingredientsLines.flatMap(x=>suggestIngredientsFromOCR(x).map(y=>normalizeIngredientWord(y.name))),
-    ...candidates.map(x=>normalizeIngredientWord(x.name))
-  ].filter(Boolean))];
-
   return {
-    name,
-    ingredients: ingredientsLines.join("\n"),
-    instructions: instructionLines.join("\n"),
-    ingredientKeywords,
-    cookingMethods: extractCookingMethods(lines.join("\n"))
+    title,
+    ingredients: ingredients.filter(l => !isSectionHeading(l)),
+    instructions: instructions.filter(l => !isSectionHeading(l))
   };
 }
+
 
 function applyOcrFieldsToEditor(text=""){
   const parsed=parseOcrIntoRecipeFields(text);
