@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#1f2937">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>Receptvalvet</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>Receptvalvet</h1>
+    <p>Lokalt på din enhet</p>
+  </div>
+  <button id="newBtn" class="primary">+ Nytt recept</button>
+</header>
+
+<main>
+  <section class="search-wrap">
+    <label for="search">Sök recept, ingredienser eller text</label>
+    <input id="search" type="search" placeholder="t.ex. kyckling vitlök citron" autocomplete="off">
+  </section>
+
+  <section id="list" class="recipe-list"></section>
+
+  <section id="empty" class="empty hidden">
+    <h2>Inga recept ännu</h2>
+    <p>Skapa ditt första recept, eller importera en JSON-backup.</p>
+    <button id="emptyNew" class="primary">Skapa recept</button>
+  </section>
+</main>
+
+<nav class="bottom-nav">
+  <button id="exportBtn">⬆️ Exportera</button>
+  <button id="importBtn">⬇️ Importera</button>
+  <input id="fileInput" type="file" accept=".json,application/json" hidden>
+</nav>
+
+<dialog id="editor">
+  <form method="dialog" id="recipeForm">
+    <div class="dialog-head">
+      <h2 id="editorTitle">Nytt recept</h2>
+      <button type="button" id="closeBtn" class="icon">×</button>
+    </div>
+
+    <label for="title">Namn</label>
+    <input id="title" required maxlength="200" placeholder="Köttbullar">
+
+    <label for="recipePhoto">Foto / OCR</label>
+    <div class="ocr-row">
+      <input id="recipePhoto" type="file" accept="image/*" capture="environment">
+      <button type="button" id="ocrBtn">📷 Läs text</button>
+    </div>
+    <div id="ocrTools" class="ocr-tools hidden">
+      <img id="ocrPreview" alt="Förhandsvisning av receptfoto">
+      <div class="ocr-controls">
+        <button type="button" id="rotateLeftBtn">↶ Rotera</button>
+        <button type="button" id="rotateRightBtn">↷ Rotera</button>
+        <button type="button" id="clearPhotoBtn">Ta bort foto</button>
+      </div>
+    </div>
+    <small id="ocrStatus" class="muted">Ta ett tydligt foto. Du kan rotera det innan OCR körs.</small>
+
+    <label for="ingredients">Ingredienser</label>
+
+    <label for="ingredients">Ingredienser</label>
+    <textarea id="ingredients" rows="7" placeholder="500 g färs&#10;1 ägg&#10;1 dl ströbröd"></textarea>
+
+    <label for="instructions">Gör så här</label>
+    <textarea id="instructions" rows="9" placeholder="Skriv eller klistra in receptet här..."></textarea>
+
+    <label for="notes">Anteckningar</label>
+    <textarea id="notes" rows="4" placeholder="Valfria anteckningar"></textarea>
+
+    <div class="editor-actions">
+      <button type="button" id="deleteBtn" class="danger hidden">Radera</button>
+      <span></span>
+      <button type="button" id="cancelBtn">Avbryt</button>
+      <button class="primary" type="submit">Spara</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="ocrReview">
+  <form method="dialog" id="ocrReviewForm">
+    <div class="dialog-head">
+      <h2>Kontrollera OCR</h2>
+      <button type="button" id="ocrReviewClose" class="icon">×</button>
+    </div>
+    <p class="muted">OCR är inte perfekt. Kontrollera texten innan du lägger in den i receptet.</p>
+    <label for="ocrText">Uppläst text</label>
+    <textarea id="ocrText" rows="16"></textarea>
+    <div class="editor-actions">
+      <span></span><span></span>
+      <button type="button" id="ocrReviewCancel">Avbryt</button>
+      <button class="primary" type="submit">Använd text</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

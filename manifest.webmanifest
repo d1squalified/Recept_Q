@@ -1,0 +1,10 @@
+{
+  "name": "Receptvalvet",
+  "short_name": "Recept",
+  "lang": "sv-SE",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#1f2937",
+  "description": "Lokalt receptbibliotek med JSON-backup."
+}

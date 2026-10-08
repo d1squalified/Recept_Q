@@ -1,2 +1,56 @@
-# Recept_Q
-Recept förvaring och sökfunktion
+# Receptvalvet
+
+A local-first Swedish recipe PWA. Recipe data is stored in the browser's IndexedDB. No server is required for the recipe data.
+
+## Easiest way to try it
+
+The app must be served over HTTP/HTTPS for the PWA service worker and some browser features to work.
+
+### Option A — Python (computer)
+
+1. Install Python 3 if it is not already installed.
+2. Open Terminal / PowerShell in this folder.
+3. Run:
+
+    python3 -m http.server 8000
+
+   On Windows, `python -m http.server 8000` may be the correct command.
+4. On the computer open http://localhost:8000
+
+### Put it on an iPhone
+
+For the PWA to work from an iPhone, the app needs to be hosted on an HTTPS address reachable by the iPhone. A simple next step is to put these files on a small static web host.
+
+Once opened in Safari on the iPhone:
+1. Tap Share.
+2. Choose "Add to Home Screen".
+3. Open Receptvalvet from the Home Screen.
+
+The recipe data remains local to that browser/device.
+
+## JSON backup
+
+Use Exportera to create a `.json` backup. The file can be sent with AirDrop, saved to Files, copied to a computer, etc.
+
+Use Importera on another device to merge the recipes from the JSON file into that device's local database.
+
+## Current version
+
+Included:
+- Swedish mobile UI
+- Local IndexedDB storage
+- Keyword search across title, ingredients, instructions and notes
+- Create/edit/delete recipes
+- JSON export
+- JSON import/merge
+- Offline PWA cache
+- Camera/photo input
+- Image preview before OCR
+- Rotate image left/right before OCR
+- Swedish OCR using Tesseract.js in the browser
+- OCR review/edit screen before text is inserted into a recipe
+- OCR text cleanup for common line-spacing artifacts
+
+## OCR note
+
+The first OCR use requires internet access so Safari can download the OCR engine and Swedish language data. Recipe data itself is never uploaded by this app. For a truly first-launch-offline OCR engine, the OCR assets can later be bundled into the app, at the cost of a much larger download.
