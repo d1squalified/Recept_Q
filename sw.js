@@ -1,6 +1,6 @@
 // Receptvalvet service worker
 // Version this whenever the app files change so browsers can detect updates.
-const CACHE = "recipe-vault-v3";
+const CACHE = "recipe-vault-v5";
 const OLD_CACHES_PREFIX = "recipe-vault-";
 const ASSETS = [
   "./",

@@ -9,7 +9,9 @@ const els = {
   list:$("list"), empty:$("empty"), search:$("search"), editor:$("editor"),
   form:$("recipeForm"), title:$("title"), ingredients:$("ingredients"),
   instructions:$("instructions"), notes:$("notes"), deleteBtn:$("deleteBtn"), recipePhoto:$("recipePhoto"), ocrBtn:$("ocrBtn"), ocrStatus:$("ocrStatus"), ocrTools:$("ocrTools"), ocrPreview:$("ocrPreview"), rotateLeftBtn:$("rotateLeftBtn"), rotateRightBtn:$("rotateRightBtn"), clearPhotoBtn:$("clearPhotoBtn"), ocrReview:$("ocrReview"), ocrReviewForm:$("ocrReviewForm"), ocrReviewClose:$("ocrReviewClose"), ocrReviewCancel:$("ocrReviewCancel"), ocrText:$("ocrText"),
-  editorTitle:$("editorTitle"), toast:$("toast"), fileInput:$("fileInput"), photoBtn:$("photoBtn"), backupDialog:$("backupDialog"), backupClose:$("backupClose")
+  editorTitle:$("editorTitle"), toast:$("toast"), fileInput:$("fileInput"), photoBtn:$("photoBtn"), backupDialog:$("backupDialog"), backupClose:$("backupClose"),
+  viewer:$("viewer"), viewerTitle:$("viewerTitle"), viewerIngredients:$("viewerIngredients"), viewerInstructions:$("viewerInstructions"), viewerNotes:$("viewerNotes"), viewerNotesWrap:$("viewerNotesWrap"), viewerClose:$("viewerClose"), viewerEdit:$("viewerEdit"),
+  appName:$("appName"), appNameInput:$("appNameInput"), saveAppName:$("saveAppName"), newBtn:$("newBtn"), emptyNew:$("emptyNew"), closeBtn:$("closeBtn"), cancelBtn:$("cancelBtn"), menuBtn:$("menuBtn"), exportBtn:$("exportBtn"), importBtn:$("importBtn")
 };
 
 function uid() {
@@ -157,8 +159,8 @@ async function importJSON(file){
   }catch(e){ alert("Kunde inte importera filen. Kontrollera att det är en Recipe Vault JSON-backup."); }
 }
 
-$("newBtn").onclick=()=>openEditor(null,true);
-$("emptyNew").onclick=()=>openEditor(null,true);
+els.newBtn.onclick=()=>openEditor(null,true);
+els.emptyNew.onclick=()=>openEditor(null,true);
 els.viewerClose.onclick=closeViewer;
 els.viewerEdit.onclick=async()=>{
   const id=viewingId;
@@ -168,17 +170,17 @@ els.viewerEdit.onclick=async()=>{
     if(r) openEditor(r,false);
   }
 };
-$("closeBtn").onclick=closeEditor;
-$("cancelBtn").onclick=closeEditor;
+els.closeBtn.onclick=closeEditor;
+els.cancelBtn.onclick=closeEditor;
 els.form.onsubmit=e=>{e.preventDefault();saveCurrent();};
 els.deleteBtn.onclick=async()=>{ if(editingId && confirm("Radera receptet?")){await deleteRecipe(editingId);closeEditor();render();toast("Recept raderat");}};
 els.search.oninput=render;
 els.photoBtn.onclick=()=>els.recipePhoto.click();
-$("menuBtn").onclick=()=>{ loadAppName(); els.backupDialog.showModal(); };
-$("saveAppName").onclick=saveAppName;
+els.menuBtn.onclick=()=>{ loadAppName(); els.backupDialog.showModal(); };
+els.saveAppName.onclick=saveAppName;
 els.backupClose.onclick=()=>els.backupDialog.close();
-$("exportBtn").onclick=async()=>{ await exportJSON(); els.backupDialog.close(); };
-$("importBtn").onclick=()=>els.fileInput.click();
+els.exportBtn.onclick=async()=>{ await exportJSON(); els.backupDialog.close(); };
+els.importBtn.onclick=()=>els.fileInput.click();
 els.fileInput.onchange=()=>{ if(els.fileInput.files[0]) { importJSON(els.fileInput.files[0]); els.backupDialog.close(); } els.fileInput.value=""; };
 
 (async()=>{
