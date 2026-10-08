@@ -26,6 +26,24 @@
   <section class="search-wrap">
     <label for="search">Sök recept, ingredienser eller text</label>
     <input id="search" type="search" placeholder="t.ex. kyckling vitlök citron" autocomplete="off">
+<select id="cookingMethodFilter" class="search-filter" aria-label="Filtrera på tillagningsmetod">
+  <option value="">Alla tillagningsmetoder</option>
+  <option value="ugn">Ugn</option>
+  <option value="fritera">Fritera</option>
+  <option value="steka">Steka</option>
+  <option value="koka">Koka</option>
+  <option value="sjuda">Sjuda</option>
+  <option value="grilla">Grilla</option>
+  <option value="baka">Baka</option>
+  <option value="ånga">Ånga</option>
+  <option value="rosta">Rosta</option>
+  <option value="woka">Woka</option>
+  <option value="airfryer">Airfryer</option>
+  <option value="mikro">Mikro</option>
+  <option value="gratinera">Gratinera</option>
+  <option value="pochera">Pochera</option>
+</select>
+
     <div class="filter-row" role="group" aria-label="Filtrera recepttyp">
       <button type="button" class="filter-btn active" data-filter="all">Alla</button>
       <button type="button" class="filter-btn" data-filter="måltid">Måltid</button>
@@ -178,6 +196,12 @@
     <p class="muted">Jag försöker automatiskt hitta receptets namn och ingredienslista. De fylls i om fälten är tomma. Kontrollera alltid OCR-resultatet innan du sparar.</p>
     <label for="ocrText">Uppläst text</label>
     <textarea id="ocrText" rows="16"></textarea>
+<div id="ingredientSuggestions" class="ingredient-suggestions" hidden>
+  <div class="ingredient-suggestions-title">Föreslagna ingredienser</div>
+  <div id="ingredientSuggestionsList"></div>
+  <button type="button" id="addSelectedIngredientsBtn">Lägg till markerade</button>
+</div>
+
     <div class="editor-actions">
       <span></span><span></span>
       <button type="button" id="ocrReviewCancel">Avbryt</button>

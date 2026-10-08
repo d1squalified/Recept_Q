@@ -1,3 +1,185 @@
+
+/* v1.9 — searchable cooking methods */
+const COOKING_METHODS = [
+  {key:"ugn", label:"Ugn", terms:["ugn","ugnsbaka","ugnsbakad","ugnsbakas","i ugnen","stek i ugn","baka i ugn","rosta i ugn"]},
+  {key:"fritera", label:"Fritera", terms:["fritera","friteras","friterad","fritering","deep fry","deep-fry","deepfry"]},
+  {key:"steka", label:"Steka", terms:["stek","steka","stekes","stekas","stekt","stekning","stekpanna","fräs","fräsa","fräses","fräst"]},
+  {key:"koka", label:"Koka", terms:["koka","kokas","kokt","kokning","koka upp","kokar"]},
+  {key:"sjuda", label:"Sjuda", terms:["sjud","sjuda","sjuder","sjudas","sjudning"]},
+  {key:"grilla", label:"Grilla", terms:["grilla","grillas","grillad","grillning","grill"]},
+  {key:"baka", label:"Baka", terms:["baka","bakas","bakad","bakning"]},
+  {key:"ånga", label:"Ånga", terms:["ånga","ångas","ångkok","ångkoka","ångkokt"]},
+  {key:"rosta", label:"Rosta", terms:["rosta","rostas","rostad","rostning"]},
+  {key:"woka", label:"Woka", terms:["woka","wokas","wokad","wokning","wok"]},
+  {key:"airfryer", label:"Airfryer", terms:["airfryer","air fryer","varmluftsfritös","varmluftsfritös","varmluftsfritera"]},
+  {key:"mikro", label:"Mikro", terms:["mikro","mikrovågsugn","mikrovågsugnen","mikra","mikras"]},
+  {key:"gratinera", label:"Gratinera", terms:["gratinera","gratineras","gratinerad","gratinering"]},
+  {key:"pochera", label:"Pochera", terms:["pochera","pocheras","pocherad","pochering"]}
+];
+
+function normalizeCookingSearch(s=""){
+  return s.toLocaleLowerCase("sv-SE")
+    .replace(/å/g,"a").replace(/ä/g,"a").replace(/ö/g,"o")
+    .replace(/[^a-z0-9\s-]/g," ");
+}
+function extractCookingMethods(text=""){
+  const n = " " + normalizeCookingSearch(text) + " ";
+  const found = [];
+  for (const method of COOKING_METHODS) {
+    if (method.terms.some(term => {
+      const t = normalizeCookingSearch(term).trim().replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/\s+/g,"\\s+");
+      return new RegExp("(^|[^a-z0-9])" + t + "([^a-z0-9]|$)", "i").test(n);
+    })) found.push(method.key);
+  }
+  return found;
+}
+function recipeCookingMethods(recipe){
+  if (Array.isArray(recipe?.cookingMethods)) return recipe.cookingMethods;
+  return extractCookingMethods([
+    recipe?.name || "", recipe?.ingredients || "",
+    recipe?.instructions || "", recipe?.ocrText || ""
+  ].join("\n"));
+}
+function cookingMethodLabels(keys=[]){
+  return [...new Set(keys)].map(k => COOKING_METHODS.find(m=>m.key===k)?.label || k);
+}
+
+
+/* v2.0 — local Swedish ingredient recognition */
+const SWEDISH_INGREDIENTS = [
+"potatis","morot","lök","gul lök","rödlök","vitlök","purjolök","schalottenlök",
+"tomat","körsbärstomat","gurka","paprika","chili","jalapeño","aubergine","zucchini",
+"squash","broccoli","blomkål","spenat","grönkål","sallad","selleri","palsternacka",
+"rödbeta","rödbetor","sötpotatis","majs","ärtor","ärta","bönor","böna","linser","lins",
+"champinjon","svamp","avokado","äpple","päron","banan","apelsin","citron","lime",
+"jordgubbar","jordgubbe","hallon","blåbär","vinbär","rabarber","ananas","mango",
+"persika","aprikos","plommon","kokos","ingefära","persilja","basilika","timjan",
+"rosmarin","oregano","koriander","gräslök","dill","salvia","mynta","dragon",
+"spiskummin","kummin","kanel","kardemumma","nejlika","paprikapulver","chiliflakes",
+"chilipulver","curry","gurkmeja","vanilj","vaniljsocker","kakao","choklad",
+"mörk choklad","ljus choklad","vit choklad","mjöl","vetemjöl","rågmjöl","havremjöl",
+"mandelmjöl","potatismjöl","majsstärkelse","stärkelse","havregryn","ströbröd",
+"panko","ris","risnudlar","nudlar","pasta","spaghetti","makaroner","lasagneplattor",
+"quinoa","bulgur","couscous","bröd","tortilla","ägg","äggula","äggvita","mjölk",
+"grädde","vispgrädde","matlagningsgrädde","crème fraiche","creme fraiche","gräddfil",
+"yoghurt","naturell yoghurt","kvarg","keso","ost","parmesan","mozzarella","fetaost",
+"ricotta","mascarpone","smör","margarin","olja","olivolja","rapsolja","matolja",
+"sesamolja","kokosolja","vinäger","balsamvinäger","soja","sojasås","fisksås",
+"ostronsås","worcestershiresås","senap","ketchup","majonnäs","honung","sirap",
+"ljus sirap","mörk sirap","socker","florsocker","farinsocker","strösocker","salt",
+"peppar","svartpeppar","vitpeppar","buljong","fond","kyckling","kycklingfilé",
+"kycklingfärs","köttfärs","nötfärs","blandfärs","fläskkött","nötkött","fläskfilé",
+"bacon","skinka","korv","chorizo","salami","kött","lamm","lammkött","fisk","lax",
+"torsk","räkor","kräftor","musslor","tonfisk","ansjovis","sardeller","nötter",
+"mandel","valnöt","hasselnöt","cashewnöt","jordnöt","jordnötssmör","sesamfrön",
+"chiafrön","solrosfrön","pumpakärnor","russin","torkade aprikoser","torkade fikon",
+"gelatin","agar agar","jäst","bakpulver","bikarbonat","hjorthornssalt","marsipan",
+"mandelmassa","sylt","marmelad","vaniljkräm","pesto","hummus","sriracha"
+];
+
+const INGREDIENT_NOISE = new Set([
+"ugn","ugnen","grad","grader","minut","minuter","sekund","sekunder","timme","timmar",
+"steg","stegvis","skål","skålen","form","formen","panna","pannan","kastrull","gryta",
+"visp","vispen","spatel","kniv","kniven","bräda","bakplåt","bakplåtspapper","plåt",
+"lock","omrörning","omgång","portion","portioner","recept","ingredienser","instruktion",
+"vatten","liter","dl","ml","cl","kg","gram","g","tsk","msk","krm","st","ca","några"
+]);
+
+const INGREDIENT_UNITS = /\b(?:kg|g|hg|mg|l|dl|cl|ml|msk|tsk|krm|st|burk|burkar|paket|påse|påsar|förp|förpackning|knippe|klyfta|klyftor|skiva|skivor|bit|bitar)\b/i;
+const INGREDIENT_HEADINGS = /^(?:ingredienser|ingredienser:|du behöver|du behöver:|till ingredienserna)\s*$/i;
+
+function ingredientBaseForm(word){
+  let w = word.toLocaleLowerCase("sv-SE").trim();
+  w = w.replace(/^[,.;:()"'“”]+|[,.;:()"'“”]+$/g,"");
+  // Common Swedish recipe inflections.
+  const exact = SWEDISH_INGREDIENTS.find(x => normalizeIngredientWord(x) === normalizeIngredientWord(w));
+  if (exact) return exact;
+  const rules = [
+    [/arna$/,""], [/erna$/,""], [/orna$/,""], [/ande$/,""], [/aste$/,""],
+    [/en$/,""], [/et$/,""], [/an$/,""], [/at$/,""], [/ar$/,""], [/er$/,""],
+    [/or$/,""], [/s$/,""]
+  ];
+  for (const [rx,rep] of rules){
+    const b=w.replace(rx,rep);
+    if (b.length >= 3 && SWEDISH_INGREDIENTS.some(x => normalizeIngredientWord(x) === normalizeIngredientWord(b))) return b;
+  }
+  return w;
+}
+
+function normalizeIngredientWord(s=""){
+  return s.toLocaleLowerCase("sv-SE").normalize("NFD")
+    .replace(/[\u0300-\u036f]/g,"")
+    .replace(/å/g,"a").replace(/ä/g,"a").replace(/ö/g,"o")
+    .replace(/[^a-z0-9\s-]/g," ").replace(/\s+/g," ").trim();
+}
+
+function extractIngredientCandidates(text=""){
+  const lines = text.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  const found = new Map();
+
+  function add(value, score){
+    const clean = value.replace(/\s+/g," ").trim().replace(/^[,;:.•\-–—]+|[,;:.•\-–—]+$/g,"");
+    if (!clean || clean.length < 2) return;
+    const key = normalizeIngredientWord(clean);
+    if (!key || INGREDIENT_NOISE.has(key)) return;
+    const canonical = SWEDISH_INGREDIENTS.find(x=>normalizeIngredientWord(x)===key) || clean;
+    const prev = found.get(normalizeIngredientWord(canonical));
+    if (!prev || score > prev.score) found.set(normalizeIngredientWord(canonical), {name:canonical, score});
+  }
+
+  for (const line of lines){
+    const low = line.toLocaleLowerCase("sv-SE");
+    if (INGREDIENT_HEADINGS.test(line)) continue;
+
+    // Strong signal: quantity/unit followed by a known ingredient.
+    const knownMatches = SWEDISH_INGREDIENTS
+      .slice().sort((a,b)=>b.length-a.length)
+      .filter(x => new RegExp("(^|[^a-zåäö])"+normalizeIngredientWord(x).replace(/\s+/g,"\\s+")+"([^a-zåäö]|$)","i").test(normalizeIngredientWord(low)));
+
+    for (const ing of knownMatches) {
+      const key = normalizeIngredientWord(ing);
+      add(ing, INGREDIENT_UNITS.test(low) ? 100 : 70);
+    }
+
+    // Heuristic: after a quantity, capture a short Swedish noun phrase.
+    const q = low.match(/\b\d+(?:[,.]\d+)?\s*(?:kg|g|hg|mg|l|dl|cl|ml|msk|tsk|krm|st|burk|burkar|paket|påse|påsar|knippe|klyftor?|skivor?|bitar?)\b\s+([^,;:.()]+)/i);
+    if (q){
+      const phrase = q[1].trim().split(/\s+(?:och|eller|samt|plus)\s+/i)[0];
+      if (phrase) add(phrase.split(/\s+/).slice(0,4).join(" "), 55);
+    }
+  }
+
+  return [...found.values()].sort((a,b)=>b.score-a.score);
+}
+
+function suggestIngredientsFromOCR(text=""){
+  const candidates = extractIngredientCandidates(text);
+  // Only show candidates with a meaningful recipe signal.
+  return candidates.filter(x => x.score >= 55).slice(0, 40);
+}
+
+
+function enrichRecipeIngredients(recipe){
+  if (!recipe) return recipe;
+  const suggestions = suggestIngredientsFromOCR([
+    recipe.ingredients || "", recipe.instructions || "", recipe.ocrText || ""
+  ].join("\n"));
+  const current = Array.isArray(recipe.ingredientKeywords) ? recipe.ingredientKeywords : [];
+  recipe.ingredientKeywords = [...new Set([
+    ...current,
+    ...suggestions.map(x=>normalizeIngredientWord(x.name))
+  ])];
+  return recipe;
+}
+
+function ingredientKeywordsFromRecipe(recipe){
+  const direct = Array.isArray(recipe?.ingredientKeywords) ? recipe.ingredientKeywords : [];
+  const suggestions = suggestIngredientsFromOCR([
+    recipe?.ingredients || "", recipe?.instructions || "", recipe?.ocrText || ""
+  ].join("\n")).map(x=>x.name);
+  return [...new Set([...direct, ...suggestions].map(normalizeIngredientWord).filter(Boolean))];
+}
+
 const DB_NAME = "recipe-vault";
 const DB_VERSION = 1;
 const STORE = "recipes";
@@ -303,3 +485,69 @@ function rv8Wire(){
   }
 }
 document.addEventListener("DOMContentLoaded",()=>setTimeout(rv8Wire,0));
+
+/* v1.9-cooking-filter */
+document.addEventListener("DOMContentLoaded", ()=>{
+  const filter = document.getElementById("cookingMethodFilter");
+  if (!filter) return;
+  filter.addEventListener("change", ()=>{
+    const wanted = filter.value;
+    const list = Array.isArray(window.recipes) ? window.recipes : [];
+    const filtered = wanted ? list.filter(r => recipeCookingMethods(r).includes(wanted)) : list;
+    if (typeof renderRecipes === "function") renderRecipes(filtered);
+    else if (typeof renderRecipeList === "function") renderRecipeList(filtered);
+  });
+});
+function updateCookingMethodDisplay(recipe){
+  const el = document.getElementById("cooking-methods-display");
+  if (!el) return;
+  const labels = cookingMethodLabels(recipeCookingMethods(recipe));
+  el.innerHTML = labels.map(x => `<span class="cooking-method-chip">${typeof escapeHtml==="function"?escapeHtml(x):x}</span>`).join("");
+}
+
+
+/* v2.0 ingredient suggestion UI */
+function renderIngredientSuggestions(text){
+  const box = document.getElementById("ingredientSuggestions");
+  const list = document.getElementById("ingredientSuggestionsList");
+  if (!box || !list) return;
+  const candidates = suggestIngredientsFromOCR(text);
+  if (!candidates.length){ box.hidden = true; list.innerHTML = ""; return; }
+  box.hidden = false;
+  list.innerHTML = candidates.map((x,i)=>
+    `<label class="ingredient-suggestion-row">
+      <input type="checkbox" data-ingredient-suggestion="${i}" checked>
+      <span class="ingredient-suggestion-name">${typeof escapeHtml==="function"?escapeHtml(x.name):x.name}</span>
+    </label>`).join("");
+  box._candidates = candidates;
+}
+
+function addSelectedIngredientSuggestions(){
+  const box = document.getElementById("ingredientSuggestions");
+  if (!box || !box._candidates) return;
+  const selected = [...box.querySelectorAll("[data-ingredient-suggestion]:checked")]
+    .map(el => box._candidates[Number(el.dataset.ingredientSuggestion)]?.name)
+    .filter(Boolean);
+  if (!selected.length) return;
+
+  // Find the ingredients field using common ids/names.
+  const field = document.querySelector("#ingredients, #ingredientInput, textarea[name='ingredients'], input[name='ingredients']");
+  if (!field) return;
+  const existing = field.value.trim();
+  const additions = selected.filter(x => !normalizeIngredientWord(existing).includes(normalizeIngredientWord(x)));
+  field.value = [existing, ...additions].filter(Boolean).join(existing ? "\n" : "");
+  field.dispatchEvent(new Event("input",{bubbles:true}));
+}
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  const btn = document.getElementById("addSelectedIngredientsBtn");
+  if (btn) btn.addEventListener("click", addSelectedIngredientSuggestions);
+
+  // Watch OCR textareas so suggestions appear while reviewing OCR.
+  const ocr = document.querySelector("#ocrText, textarea[name='ocrText'], #ocrOutput");
+  if (ocr){
+    const refresh = ()=>renderIngredientSuggestions(ocr.value || "");
+    ocr.addEventListener("input", refresh);
+    refresh();
+  }
+});

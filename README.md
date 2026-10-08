@@ -64,3 +64,11 @@ The app checks for new versions when opened and when it returns to the foregroun
 ## v1.8 — safe JSON sharing
 
 Receptvalvet JSON files are portable and can be sent by AirDrop, Mail, Messages, Files, iCloud Drive, OneDrive, Google Drive or similar. The app previews incoming recipes before import, detects duplicates, avoids silently overwriting newer local recipes, and supports importing everything as new recipes.
+
+
+### v1.9 – Tillagningsmetoder
+Automatisk identifiering och sökning av tillagningsmetoder som ugn, fritera, steka, koka, grilla, baka, airfryer m.fl. Svenska böjningsformer normaliseras för sökning.
+
+
+### v2.0 – Ingrediensigenkänning
+OCR can suggest likely Swedish recipe ingredients locally. Suggestions are reviewable with checkboxes before being added to the ingredient field. Ingredient keywords are also used for search, while cooking-method recognition from v1.9 remains available.
