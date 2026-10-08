@@ -577,7 +577,7 @@ els.ocrBtn.onclick=async()=>{
     const prepared=await makeOCRImage(file,ocrImageRotation);
     const worker=await Tesseract.createWorker('swe',1,{logger:m=>{if(m.status&&typeof m.progress==='number')els.ocrStatus.textContent=`${m.status} ${Math.round(m.progress*100)}%`;}});
     await worker.setParameters({tessedit_pageseg_mode: '3', preserve_interword_spaces: '1', user_defined_dpi: '300'});
-    const result=await worker.recognize(prepared);
+    const result = await worker.recognize(prepared, {}, {text: true, blocks: true});
     await worker.terminate();
     const lines=ocrResultToLines(result);
     const text=lines.map(l=>l.text).join('\n').trim();
