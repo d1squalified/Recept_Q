@@ -579,14 +579,12 @@ els.ocrBtn.onclick=async()=>{
     await worker.setParameters({tessedit_pageseg_mode: '3', preserve_interword_spaces: '1', user_defined_dpi: '300'});
     const result = await worker.recognize(prepared, {}, {text: true, blocks: true});
     await worker.terminate();
-    const lines=ocrResultToLines(result);
-    const text=lines.map(l=>l.text).join('\n').trim();
-    if(!text) throw new Error('Ingen text hittades');
-    const structure=detectOCRStructure(text);
-    els.ocrText.value=text;
-    els.ocrReview.dataset.detectedTitle=structure.title||'';
-    els.ocrReview.dataset.detectedIngredients=normalizeIngredientLines(structure.ingredients).join('\n');
-    els.ocrReview.dataset.detectedInstructions=normalizeInstructionLines(structure.instructions).join('\n');
+    const lines = ocrResultToLines(result);
+    const text = lines.map(l => l.text).join('\n').trim();
+    if (!text) throw new Error('Ingen text hittades');
+    const structure = detectOCRStructure(lines);
+    els.ocrText.value = text;
+    els.ocrText.dispatchEvent(new Event('input', {bubbles: true}));
     els.ocrReview.showModal();
     els.ocrStatus.textContent='Text uppläst. Kontrollera titel och ingredienser innan du använder den.';
   }catch(e){console.error(e);els.ocrStatus.textContent='OCR misslyckades.';alert('OCR kunde inte läsa bilden. Försök med ett skarpare, rakare foto och bättre ljus.');}
