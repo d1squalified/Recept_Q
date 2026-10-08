@@ -6,17 +6,20 @@
   <meta name="theme-color" content="#1f2937">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>Receptvalvet</title>
+  <title>Recept</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="topbar">
   <div>
-    <h1>Receptvalvet</h1>
+    <h1 id="appName">Recept</h1>
     <p>Lokalt på din enhet</p>
   </div>
-  <button id="newBtn" class="primary">+ Nytt recept</button>
+  <div class="topbar-actions">
+    <button id="menuBtn" class="icon menu-button" type="button" aria-label="Inställningar, backup och återställning">⋯</button>
+    <button id="newBtn" class="primary">+ Nytt recept</button>
+  </div>
 </header>
 
 <main>
@@ -29,16 +32,32 @@
 
   <section id="empty" class="empty hidden">
     <h2>Inga recept ännu</h2>
-    <p>Skapa ditt första recept, eller importera en JSON-backup.</p>
+    <p>Skapa ditt första recept, eller återställ en JSON-backup via ⋯.</p>
     <button id="emptyNew" class="primary">Skapa recept</button>
   </section>
 </main>
 
-<nav class="bottom-nav">
-  <button id="exportBtn">⬆️ Exportera</button>
-  <button id="importBtn">⬇️ Importera</button>
-  <input id="fileInput" type="file" accept=".json,application/json" hidden>
-</nav>
+<dialog id="viewer">
+  <div class="viewer-content">
+    <div class="dialog-head">
+      <h2 id="viewerTitle">Recept</h2>
+      <button type="button" id="viewerClose" class="icon">×</button>
+    </div>
+    <section class="recipe-view">
+      <h3>Ingredienser</h3>
+      <div id="viewerIngredients" class="recipe-text"></div>
+      <h3>Gör så här</h3>
+      <div id="viewerInstructions" class="recipe-text"></div>
+      <div id="viewerNotesWrap">
+        <h3>Anteckningar</h3>
+        <div id="viewerNotes" class="recipe-text"></div>
+      </div>
+    </section>
+    <div class="viewer-actions">
+      <button type="button" id="viewerEdit" class="primary">✎ Redigera</button>
+    </div>
+  </div>
+</dialog>
 
 <dialog id="editor">
   <form method="dialog" id="recipeForm">
@@ -52,8 +71,9 @@
 
     <label for="recipePhoto">Foto / OCR</label>
     <div class="ocr-row">
-      <input id="recipePhoto" type="file" accept="image/*" capture="environment">
-      <button type="button" id="ocrBtn">📷 Läs text</button>
+      <input id="recipePhoto" type="file" accept="image/*" capture="environment" hidden>
+      <button type="button" id="photoBtn" class="camera-button">📷 Ta foto / välj bild</button>
+      <button type="button" id="ocrBtn">Läs text</button>
     </div>
     <div id="ocrTools" class="ocr-tools hidden">
       <img id="ocrPreview" alt="Förhandsvisning av receptfoto">
@@ -64,8 +84,6 @@
       </div>
     </div>
     <small id="ocrStatus" class="muted">Ta ett tydligt foto. Du kan rotera det innan OCR körs.</small>
-
-    <label for="ingredients">Ingredienser</label>
 
     <label for="ingredients">Ingredienser</label>
     <textarea id="ingredients" rows="7" placeholder="500 g färs&#10;1 ägg&#10;1 dl ströbröd"></textarea>
@@ -82,6 +100,30 @@
       <button type="button" id="cancelBtn">Avbryt</button>
       <button class="primary" type="submit">Spara</button>
     </div>
+  </form>
+</dialog>
+
+<dialog id="backupDialog">
+  <form method="dialog" id="backupForm">
+    <div class="dialog-head">
+      <h2>Inställningar & backup</h2>
+      <button type="button" id="backupClose" class="icon">×</button>
+    </div>
+
+    <label for="appNameInput">Namn högst upp i appen</label>
+    <div class="settings-name-row">
+      <input id="appNameInput" maxlength="60" placeholder="Mitt receptbibliotek">
+      <button type="button" id="saveAppName">Spara</button>
+    </div>
+    <small class="muted">Du kan ändra detta när du vill. Namnet sparas bara på den här enheten.</small>
+
+    <hr class="separator">
+    <p class="muted backup-note">Recepten ligger bara på den här enheten. Använd JSON-backup för att flytta eller skydda dem.</p>
+    <div class="backup-actions">
+      <button type="button" id="exportBtn">⬆️ Exportera JSON</button>
+      <button type="button" id="importBtn">⬇️ Importera JSON</button>
+    </div>
+    <input id="fileInput" type="file" accept=".json,application/json" hidden>
   </form>
 </dialog>
 

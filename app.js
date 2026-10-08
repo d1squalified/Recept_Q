@@ -1,14 +1,15 @@
 const DB_NAME = "recipe-vault";
 const DB_VERSION = 1;
 const STORE = "recipes";
-let db, editingId = null;
+let db, editingId = null, viewingId = null;
+const APP_NAME_KEY = "recipe-vault-app-name";
 
 const $ = id => document.getElementById(id);
 const els = {
   list:$("list"), empty:$("empty"), search:$("search"), editor:$("editor"),
   form:$("recipeForm"), title:$("title"), ingredients:$("ingredients"),
   instructions:$("instructions"), notes:$("notes"), deleteBtn:$("deleteBtn"), recipePhoto:$("recipePhoto"), ocrBtn:$("ocrBtn"), ocrStatus:$("ocrStatus"), ocrTools:$("ocrTools"), ocrPreview:$("ocrPreview"), rotateLeftBtn:$("rotateLeftBtn"), rotateRightBtn:$("rotateRightBtn"), clearPhotoBtn:$("clearPhotoBtn"), ocrReview:$("ocrReview"), ocrReviewForm:$("ocrReviewForm"), ocrReviewClose:$("ocrReviewClose"), ocrReviewCancel:$("ocrReviewCancel"), ocrText:$("ocrText"),
-  editorTitle:$("editorTitle"), toast:$("toast"), fileInput:$("fileInput")
+  editorTitle:$("editorTitle"), toast:$("toast"), fileInput:$("fileInput"), photoBtn:$("photoBtn"), backupDialog:$("backupDialog"), backupClose:$("backupClose")
 };
 
 function uid() {
@@ -59,11 +60,25 @@ async function render() {
     card.querySelector("h3").textContent=r.title||"Namnlöst recept";
     card.querySelector("p").textContent=[r.ingredients,r.instructions].filter(Boolean).join("\n\n");
     card.querySelector(".meta").textContent=new Date(r.modified).toLocaleDateString("sv-SE");
-    card.onclick=()=>openEditor(r);
+    card.onclick=()=>openViewer(r);
     els.list.appendChild(card);
   });
 }
-function openEditor(r=null){
+function openViewer(r){
+  viewingId = r?.id || null;
+  els.viewerTitle.textContent = r?.title || "Namnlöst recept";
+  els.viewerIngredients.textContent = r?.ingredients || "—";
+  els.viewerInstructions.textContent = r?.instructions || "—";
+  els.viewerNotes.textContent = r?.notes || "";
+  els.viewerNotesWrap.classList.toggle("hidden", !r?.notes);
+  els.viewer.showModal();
+}
+function closeViewer(){
+  if(els.viewer.open) els.viewer.close();
+  viewingId = null;
+}
+
+function openEditor(r=null, startCamera=false){
   editingId=r?.id||null;
   els.editorTitle.textContent=r?"Redigera recept":"Nytt recept";
   els.title.value=r?.title||"";
@@ -71,10 +86,18 @@ function openEditor(r=null){
   els.instructions.value=r?.instructions||"";
   els.notes.value=r?.notes||"";
   els.deleteBtn.classList.toggle("hidden",!r);
+  resetOCRPreview();
   els.editor.showModal();
-  setTimeout(()=>els.title.focus(),50);
+
+  // Keep the camera/file picker directly inside the original user tap.
+  // This is more reliable on iPhone than opening it from a delayed callback.
+  if(startCamera) {
+    els.recipePhoto.click();
+  } else {
+    setTimeout(()=>els.title.focus(),50);
+  }
 }
-function closeEditor(){ els.editor.close(); editingId=null; }
+function closeEditor(){ els.editor.close(); editingId=null; resetOCRPreview(); }
 function toast(msg){
   els.toast.textContent=msg; els.toast.classList.add("show");
   setTimeout(()=>els.toast.classList.remove("show"),2200);
@@ -90,6 +113,21 @@ async function saveCurrent(){
   if(!recipe.title) return;
   await putRecipe(recipe); closeEditor(); await render(); toast("Recept sparat");
 }
+function loadAppName(){
+  const name=localStorage.getItem(APP_NAME_KEY) || "Recept";
+  els.appName.textContent=name;
+  document.title=name;
+  els.appNameInput.value=name;
+}
+function saveAppName(){
+  const name=els.appNameInput.value.trim() || "Recept";
+  localStorage.setItem(APP_NAME_KEY,name);
+  els.appName.textContent=name;
+  document.title=name;
+  els.appNameInput.value=name;
+  toast("Appnamnet sparat");
+}
+
 async function exportJSON(){
   const recipes=await allRecipes();
   const payload={format:"recipe-vault",version:1,exportedAt:new Date().toISOString(),recipes};
@@ -119,18 +157,32 @@ async function importJSON(file){
   }catch(e){ alert("Kunde inte importera filen. Kontrollera att det är en Recipe Vault JSON-backup."); }
 }
 
-$("newBtn").onclick=()=>openEditor();
-$("emptyNew").onclick=()=>openEditor();
+$("newBtn").onclick=()=>openEditor(null,true);
+$("emptyNew").onclick=()=>openEditor(null,true);
+els.viewerClose.onclick=closeViewer;
+els.viewerEdit.onclick=async()=>{
+  const id=viewingId;
+  closeViewer();
+  if(id){
+    const r=(await allRecipes()).find(x=>x.id===id);
+    if(r) openEditor(r,false);
+  }
+};
 $("closeBtn").onclick=closeEditor;
 $("cancelBtn").onclick=closeEditor;
 els.form.onsubmit=e=>{e.preventDefault();saveCurrent();};
 els.deleteBtn.onclick=async()=>{ if(editingId && confirm("Radera receptet?")){await deleteRecipe(editingId);closeEditor();render();toast("Recept raderat");}};
 els.search.oninput=render;
-$("exportBtn").onclick=exportJSON;
+els.photoBtn.onclick=()=>els.recipePhoto.click();
+$("menuBtn").onclick=()=>{ loadAppName(); els.backupDialog.showModal(); };
+$("saveAppName").onclick=saveAppName;
+els.backupClose.onclick=()=>els.backupDialog.close();
+$("exportBtn").onclick=async()=>{ await exportJSON(); els.backupDialog.close(); };
 $("importBtn").onclick=()=>els.fileInput.click();
-els.fileInput.onchange=()=>{ if(els.fileInput.files[0]) importJSON(els.fileInput.files[0]); els.fileInput.value=""; };
+els.fileInput.onchange=()=>{ if(els.fileInput.files[0]) { importJSON(els.fileInput.files[0]); els.backupDialog.close(); } els.fileInput.value=""; };
 
 (async()=>{
+  loadAppName();
   try{await openDB(); await render();}
   catch(e){console.error(e); alert("Din webbläsare stöder inte lokal lagring för appen.");}
   if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(console.error);

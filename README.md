@@ -30,9 +30,7 @@ The recipe data remains local to that browser/device.
 
 ## JSON backup
 
-Use Exportera to create a `.json` backup. The file can be sent with AirDrop, saved to Files, copied to a computer, etc.
-
-Use Importera on another device to merge the recipes from the JSON file into that device's local database.
+Use **⋯** in the top-right corner to open **Backup & återställning**. There you can export a `.json` backup or import one on another device. The file can be sent with AirDrop, saved to Files, copied to a computer, etc.
 
 ## Current version
 
@@ -44,7 +42,7 @@ Included:
 - JSON export
 - JSON import/merge
 - Offline PWA cache
-- Camera/photo input
+- Camera/photo input directly from **Nytt recept**
 - Image preview before OCR
 - Rotate image left/right before OCR
 - Swedish OCR using Tesseract.js in the browser

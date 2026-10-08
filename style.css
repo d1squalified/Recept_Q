@@ -12,6 +12,8 @@ button.primary { background:var(--accent); color:white; font-weight:600; }
 button.danger { background:#fee2e2; color:var(--danger); }
 button.icon { background:transparent; font-size:28px; padding:4px 10px; }
 .topbar { position:sticky; top:0; z-index:3; background:rgba(245,245,247,.94); backdrop-filter:blur(12px); display:flex; justify-content:space-between; align-items:center; padding:18px max(16px,calc((100% - 900px)/2)); border-bottom:1px solid var(--line); }
+.topbar-actions { display:flex; align-items:center; gap:7px; }
+.menu-button { font-size:25px !important; line-height:1; padding:7px 10px !important; color:var(--muted); }
 h1 { margin:0; font-size:25px; } .topbar p { margin:2px 0 0;color:var(--muted);font-size:13px; }
 main { max-width:900px; margin:auto; padding:18px 16px 100px; }
 .search-wrap { margin-bottom:18px; }
@@ -27,27 +29,38 @@ input:focus,textarea:focus { outline:2px solid #93c5fd; border-color:var(--accen
 .empty { text-align:center; padding:60px 20px; color:var(--muted); }
 .empty h2 { color:var(--text); }
 .hidden { display:none !important; }
-.bottom-nav { position:fixed; bottom:0; left:0; right:0; z-index:4; display:flex; gap:10px; justify-content:center; padding:10px max(12px,calc((100% - 900px)/2)); padding-bottom:max(10px,env(safe-area-inset-bottom)); background:rgba(255,255,255,.95); backdrop-filter:blur(12px); border-top:1px solid var(--line); }
-.bottom-nav button { flex:1; max-width:220px; }
+
 dialog { width:min(720px,calc(100% - 24px)); max-height:90vh; border:0; border-radius:18px; padding:0; box-shadow:0 20px 70px rgba(0,0,0,.25); }
 dialog::backdrop { background:rgba(0,0,0,.45); }
 #recipeForm { padding:20px; overflow:auto; max-height:90vh; }
 .dialog-head { display:flex; align-items:center; justify-content:space-between; }
 .dialog-head h2 { margin:0; }
 .editor-actions { display:grid; grid-template-columns:auto 1fr auto auto; gap:8px; margin-top:18px; }
-.toast { position:fixed; left:50%; bottom:76px; transform:translateX(-50%) translateY(20px); background:#111827; color:white; padding:11px 15px; border-radius:12px; opacity:0; pointer-events:none; transition:.2s; z-index:10; }
+.toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px); background:#111827; color:white; padding:11px 15px; border-radius:12px; opacity:0; pointer-events:none; transition:.2s; z-index:10; }
 .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
 @media (max-width:560px) {
   .topbar { align-items:flex-start; gap:10px; }
   .topbar .primary { white-space:nowrap; }
+  .topbar-actions { gap:4px; }
   .editor-actions { grid-template-columns:1fr 1fr; }
   .editor-actions span { display:none; }
   .editor-actions .danger { grid-column:1/-1; }
 }
 
-.ocr-row{display:flex;gap:8px;align-items:center}.ocr-row input{flex:1}.ocr-row button{white-space:nowrap}.muted{color:var(--muted);font-size:12px;display:block;margin-top:6px}
+.ocr-row{display:flex;gap:8px;align-items:center}.ocr-row button{white-space:nowrap}.camera-button{flex:1}.muted{color:var(--muted);font-size:12px;display:block;margin-top:6px}
+.backup-note{margin:12px 0 4px}.backup-actions{display:grid;gap:10px;margin-top:18px}.backup-actions button{width:100%;}
 
 .ocr-tools{margin-top:10px;background:white;border:1px solid var(--line);border-radius:14px;padding:10px}
 .ocr-tools img{display:block;width:100%;max-height:280px;object-fit:contain;border-radius:10px;background:#111}
 .ocr-controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}
 .ocr-controls button{padding:8px 10px;font-size:13px}
+
+/* Recipe reading view */
+.viewer-content { padding: 18px; }
+.recipe-view h3 { margin: 18px 0 8px; font-size: 1rem; }
+.recipe-view h3:first-child { margin-top: 4px; }
+.recipe-text { white-space: pre-wrap; line-height: 1.55; overflow-wrap: anywhere; }
+.viewer-actions { margin-top: 22px; display: flex; justify-content: flex-end; }
+.settings-name-row { display:flex; gap:8px; align-items:center; }
+.settings-name-row input { flex:1; min-width:0; }
+.separator { border:0; border-top:1px solid #ddd; margin:20px 0; }
