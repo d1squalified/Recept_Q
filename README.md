@@ -48,6 +48,10 @@ Included:
 - Swedish OCR using Tesseract.js in the browser
 - OCR review/edit screen before text is inserted into a recipe
 - OCR text cleanup for common line-spacing artifacts
+- Recipe type: Måltid or Efterrätt
+- Quick type filters in the search area
+- Rich text formatting: bold, italic, underline, headings and lists
+- OCR image preprocessing for contrast/greyscale and improved page segmentation
 
 ## OCR note
 
