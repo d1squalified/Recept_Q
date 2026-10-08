@@ -16,3 +16,9 @@
 .ingredient-suggestion-name{flex:1}
 
 .ingredient-suggestions-help{font-size:.88rem;opacity:.75;margin-bottom:8px}
+/* v2.3: plain text recipe fields */
+#recipeForm textarea{width:100%;border:1px solid #d1d5db;border-radius:12px;padding:12px;background:#fff;color:var(--text);line-height:1.55;resize:vertical;min-height:110px}
+#recipeForm textarea:focus{outline:2px solid #93c5fd;border-color:var(--accent)}
+#ingredientsEditor{min-height:150px}
+#instructionsEditor{min-height:240px}
+#notesEditor{min-height:120px}

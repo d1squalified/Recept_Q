@@ -53,7 +53,7 @@
     <section class="recipe-view">
       <h3>Ingredienser</h3>
       <div id="viewerIngredients" class="recipe-text"></div>
-      <h3>Gör så här</h3>
+      <h3>Metod</h3>
       <div id="viewerInstructions" class="recipe-text"></div>
       <div id="viewerNotesWrap">
         <h3>Anteckningar</h3>
@@ -98,44 +98,16 @@
       <option value="efterrätt">Efterrätt</option>
     </select>
 
-    <label>Ingredienser</label>
-    <div class="rich-editor" data-placeholder="500 g färs&#10;1 ägg&#10;1 dl ströbröd">
-      <div class="toolbar" data-target="ingredientsEditor">
-        <button type="button" data-cmd="bold"><b>B</b></button>
-        <button type="button" data-cmd="italic"><i>I</i></button>
-        <button type="button" data-cmd="underline"><u>U</u></button>
-        <button type="button" data-cmd="insertUnorderedList">• Lista</button>
-        <button type="button" data-cmd="insertOrderedList">1. Lista</button>
-        <button type="button" data-cmd="formatBlock" data-value="h4">Rubrik</button>
-        <button type="button" data-cmd="removeFormat">Rensa</button>
-      </div>
-      <div id="ingredientsEditor" class="rich-input" contenteditable="true" role="textbox" aria-label="Ingredienser"></div>
-    </div>
+    <label for="ingredientsEditor">Ingredienser</label>
+    <textarea id="ingredientsEditor" rows="7" placeholder="500 g färs
+1 ägg
+1 dl ströbröd"></textarea>
 
-    <label>Metod</label>
-    <div class="rich-editor">
-      <div class="toolbar" data-target="instructionsEditor">
-        <button type="button" data-cmd="bold"><b>B</b></button>
-        <button type="button" data-cmd="italic"><i>I</i></button>
-        <button type="button" data-cmd="underline"><u>U</u></button>
-        <button type="button" data-cmd="insertUnorderedList">• Lista</button>
-        <button type="button" data-cmd="insertOrderedList">1. Lista</button>
-        <button type="button" data-cmd="formatBlock" data-value="h4">Rubrik</button>
-        <button type="button" data-cmd="removeFormat">Rensa</button>
-      </div>
-      <div id="instructionsEditor" class="rich-input tall" contenteditable="true" role="textbox" aria-label="Metod"></div>
-    </div>
+    <label for="instructionsEditor">Metod</label>
+    <textarea id="instructionsEditor" rows="12" placeholder="Skriv hur receptet tillagas..."></textarea>
 
-    <label>Anteckningar</label>
-    <div class="rich-editor">
-      <div class="toolbar" data-target="notesEditor">
-        <button type="button" data-cmd="bold"><b>B</b></button>
-        <button type="button" data-cmd="italic"><i>I</i></button>
-        <button type="button" data-cmd="underline"><u>U</u></button>
-        <button type="button" data-cmd="removeFormat">Rensa</button>
-      </div>
-      <div id="notesEditor" class="rich-input notes-input" contenteditable="true" role="textbox" aria-label="Anteckningar"></div>
-    </div>
+    <label for="notesEditor">Anteckningar</label>
+    <textarea id="notesEditor" rows="5" placeholder="Egna anteckningar..."></textarea>
 
     <div class="editor-actions">
       <button type="button" id="deleteBtn" class="danger hidden">Radera</button>

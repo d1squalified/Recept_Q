@@ -252,16 +252,12 @@ function parseOcrIntoRecipeFields(text=""){
     ...candidates.map(x=>normalizeIngredientWord(x.name))
   ].filter(Boolean))];
 
-  // IMPORTANT: never discard OCR text. The complete normalized OCR stays in
-  // Metod so the user can correct the recipe without retyping missing parts.
-  const fullOcrText = lines.join("\n");
-
   return {
     name,
     ingredients: ingredientsLines.join("\n"),
-    instructions: fullOcrText,
+    instructions: instructionLines.join("\n"),
     ingredientKeywords,
-    cookingMethods: extractCookingMethods(fullOcrText)
+    cookingMethods: extractCookingMethods(lines.join("\n"))
   };
 }
 
@@ -369,9 +365,20 @@ function sanitizeHtml(html){
   src.childNodes.forEach(n=>walk(n,clean));
   return clean.innerHTML;
 }
-function getEditorHtml(el){ return sanitizeHtml(el.innerHTML).trim(); }
-function setEditorHtml(el,value){ el.innerHTML=legacyToHtml(value); }
-function editorHasContent(el){ return htmlToText(el.innerHTML).trim().length>0; }
+function getEditorHtml(el){
+  if(!el) return '';
+  if(el.matches('textarea, input')) return el.value.trim();
+  return sanitizeHtml(el.innerHTML).trim();
+}
+function setEditorHtml(el,value){
+  if(!el) return;
+  if(el.matches('textarea, input')){ el.value=htmlToText(value||''); return; }
+  el.innerHTML=legacyToHtml(value);
+}
+function editorHasContent(el){
+  if(!el) return false;
+  return (el.matches('textarea, input') ? el.value : htmlToText(el.innerHTML)).trim().length>0;
+}
 
 function recipeSearchText(r){ return [r.title,r.type,htmlToText(r.ingredients),htmlToText(r.instructions),htmlToText(r.notes)].join('\n'); }
 
@@ -427,22 +434,30 @@ document.querySelectorAll('.filter-btn').forEach(btn=>btn.onclick=()=>{activeFil
 els.photoBtn.onclick=()=>els.recipePhoto.click();els.menuBtn.onclick=()=>{loadAppName();els.backupDialog.showModal();};els.saveAppName.onclick=saveAppName;els.backupClose.onclick=()=>els.backupDialog.close();
 els.exportBtn.onclick=async()=>{await exportJSON();els.backupDialog.close();};els.importBtn.onclick=()=>els.fileInput.click();els.fileInput.onchange=()=>{if(els.fileInput.files[0]){importJSON(els.fileInput.files[0]);els.backupDialog.close();}els.fileInput.value='';};
 
-document.querySelectorAll('.toolbar').forEach(toolbar=>toolbar.addEventListener('mousedown',e=>e.preventDefault()));
-document.querySelectorAll('.toolbar button').forEach(btn=>btn.addEventListener('click',()=>{const target=$(btn.closest('.toolbar').dataset.target);target.focus();const cmd=btn.dataset.cmd;document.execCommand(cmd,false,btn.dataset.value||null);}));
 
 (async()=>{loadAppName();try{await openDB();await render();}catch(e){console.error(e);alert('Din webbläsare stöder inte lokal lagring för appen.');}
-if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.js?v=7',{updateViaCache:'none'}).then(reg=>{const check=()=>reg.update().catch(()=>{});check();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check();});let reloading=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading)return;reloading=true;window.location.reload();});}).catch(console.error);}})();
+if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.js?v=8',{updateViaCache:'none'}).then(reg=>{const check=()=>reg.update().catch(()=>{});check();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')check();});let reloading=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading)return;reloading=true;window.location.reload();});}).catch(console.error);}})();
 
 let ocrImageUrl=null,ocrImageRotation=0;
 function resetOCRPreview(){if(ocrImageUrl)URL.revokeObjectURL(ocrImageUrl);ocrImageUrl=null;els.recipePhoto.value='';els.ocrPreview.removeAttribute('src');els.ocrTools.classList.add('hidden');els.ocrStatus.textContent='Ta ett tydligt foto. Rak bild och bra ljus ger bäst resultat.';ocrImageRotation=0;}
 els.recipePhoto.onchange=()=>{const file=els.recipePhoto.files[0];if(!file)return;if(ocrImageUrl)URL.revokeObjectURL(ocrImageUrl);ocrImageUrl=URL.createObjectURL(file);els.ocrPreview.src=ocrImageUrl;els.ocrPreview.style.transform='rotate(0deg)';els.ocrTools.classList.remove('hidden');ocrImageRotation=0;els.ocrStatus.textContent='Foto klart. Rotera vid behov och tryck sedan Läs text.';};
 els.rotateLeftBtn.onclick=()=>{ocrImageRotation=(ocrImageRotation-90+360)%360;els.ocrPreview.style.transform=`rotate(${ocrImageRotation}deg)`};els.rotateRightBtn.onclick=()=>{ocrImageRotation=(ocrImageRotation+90)%360;els.ocrPreview.style.transform=`rotate(${ocrImageRotation}deg)`};els.clearPhotoBtn.onclick=resetOCRPreview;
 async function makeOCRImage(file,rotation){const bitmap=await createImageBitmap(file);const scale=Math.min(1,2200/Math.max(bitmap.width,bitmap.height));const swap=rotation%180!==0;const w=Math.round((swap?bitmap.height:bitmap.width)*scale),h=Math.round((swap?bitmap.width:bitmap.height)*scale);const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;const ctx=canvas.getContext('2d',{willReadFrequently:true});ctx.fillStyle='#fff';ctx.fillRect(0,0,w,h);ctx.translate(w/2,h/2);ctx.rotate(rotation*Math.PI/180);ctx.drawImage(bitmap,-bitmap.width*scale/2,-bitmap.height*scale/2,bitmap.width*scale,bitmap.height*scale);bitmap.close();
-const image=ctx.getImageData(0,0,w,h),d=image.data;for(let i=0;i<d.length;i+=4){const y=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];const boosted=Math.max(0,Math.min(255,(y-128)*1.45+128));d[i]=d[i+1]=d[i+2]=boosted;}ctx.putImageData(image,0,0);return new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.95));}
+// Leave a tiny white safety margin around the photographed page so border marks are less likely to become letters.
+const marginX=Math.round(w*0.012),marginY=Math.round(h*0.012);
+const cropped=document.createElement('canvas');cropped.width=Math.max(1,w-marginX*2);cropped.height=Math.max(1,h-marginY*2);
+const cropCtx=cropped.getContext('2d');cropCtx.fillStyle='#fff';cropCtx.fillRect(0,0,cropped.width,cropped.height);cropCtx.drawImage(canvas,marginX,marginY,cropped.width,cropped.height,0,0,cropped.width,cropped.height);
+const image=cropCtx.getImageData(0,0,cropped.width,cropped.height),d=image.data;for(let i=0;i<d.length;i+=4){const y=0.299*d[i]+0.587*d[i+1]+0.114*d[i+2];const boosted=Math.max(0,Math.min(255,(y-128)*1.45+128));d[i]=d[i+1]=d[i+2]=boosted;}cropCtx.putImageData(image,0,0);return new Promise(resolve=>cropped.toBlob(resolve,'image/jpeg',.95));}
+function cleanOCREdgeNoise(line){
+  let s=(line||'').replace(/[ \t]+/g,' ').replace(/\s+([,.;:!?])/g,'$1').trim();
+  // Tesseract can pick up isolated capital letters from the very edge of a photographed page.
+  // Remove only standalone one-letter edge tokens; keep normal words and all recipe content.
+  s=s.replace(/^([A-ZÅÄÖ])\s+(?=[A-Za-zÅÄÖåäö])/u,'');
+  s=s.replace(/(?<=[A-Za-zÅÄÖåäö0-9)])\s+([A-ZÅÄÖ])$/u,'');
+  return s.trim();
+}
 function cleanOCRLines(text){
-  return (text||'').replace(/\r/g,'').split('\n').map(line=>
-    line.replace(/[ \t]+/g,' ').replace(/\s+([,.;:!?])/g,'$1').trim()
-  );
+  return (text||'').replace(/\r/g,'').split('\n').map(cleanOCREdgeNoise);
 }
 function isSectionHeading(line){
   const n=normalize(line).replace(/[:\-–—]+$/,'').trim();
@@ -549,26 +564,7 @@ els.ocrBtn.onclick=async()=>{
   finally{els.ocrBtn.disabled=false;}
 };
 function closeOCRReview(){if(els.ocrReview.open)els.ocrReview.close();}els.ocrReviewClose.onclick=closeOCRReview;els.ocrReviewCancel.onclick=closeOCRReview;
-els.ocrReviewForm.onsubmit=e=>{
-  e.preventDefault();
-  const text=els.ocrText.value.trim();
-  if(!text)return;
-
-  // Keep the entire OCR text in Metod. Ingredient recognition is additive: it
-  // fills the Ingredients field, but never removes anything from the OCR text.
-  const parsed=parseOcrIntoRecipeFields(text);
-  if(!els.title.value.trim()&&parsed.name)els.title.value=parsed.name;
-  if(!editorHasContent(els.ingredientsEditor)&&parsed.ingredients)setEditorHtml(els.ingredientsEditor,parsed.ingredients);
-
-  // Always replace the Method field with the complete OCR result so no recipe
-  // lines are silently lost and the user can clean it up manually.
-  els.instructionsEditor.innerHTML=ocrToHtml(parsed.instructions||text);
-  els.instructionsEditor.dispatchEvent(new Event('input',{bubbles:true}));
-
-  closeOCRReview();
-  els.ocrStatus.textContent='Hela OCR-texten sparades i Metod. Titel och ingredienser fylldes i där de kunde identifieras. Kontrollera och spara.';
-  toast('OCR-text infogad');
-};
+els.ocrReviewForm.onsubmit=e=>{e.preventDefault();const text=els.ocrText.value.trim();if(!text)return;const detectedTitle=els.ocrReview.dataset.detectedTitle||'';const detectedIngredients=els.ocrReview.dataset.detectedIngredients||'';const detectedInstructions=els.ocrReview.dataset.detectedInstructions||'';if(!els.title.value.trim()&&detectedTitle)els.title.value=detectedTitle;if(!editorHasContent(els.ingredientsEditor)&&detectedIngredients)setEditorHtml(els.ingredientsEditor,detectedIngredients);setEditorHtml(els.instructionsEditor,text);closeOCRReview();els.ocrStatus.textContent='OCR-text infogad. Titel och ingredienser fylldes i där de kunde identifieras, och hela OCR-texten sparades i Metod.';toast('OCR-text infogad');};
 
 
 /* v1.8 safe JSON sharing */
@@ -682,23 +678,3 @@ document.addEventListener("DOMContentLoaded", ()=>{
 });
 
 
-/* v2.1 — intercept OCR "Använd text" action and populate fields */
-document.addEventListener("click",(ev)=>{
-  const el=ev.target.closest("button, [role='button']");
-  if(!el) return;
-  const label=(el.textContent||"").trim().toLocaleLowerCase("sv-SE");
-  if(!/använd\s+text|use\s+text/.test(label)) return;
-
-  // Find OCR text from the visible OCR textarea/panel.
-  const ocr=document.querySelector("#ocrText, textarea[name='ocrText'], #ocrOutput, textarea[id*='ocr' i]");
-  const text=ocr?.value || window.lastOcrText || "";
-  if(!text.trim()) return;
-
-  // Let the existing handler run first, then populate the final editor fields.
-  setTimeout(()=>applyOcrFieldsToEditor(text),80);
-});
-
-
-/* v2.3 — explicit New Recipe field order
-   Photo/OCR -> Name -> Type -> Ingredients -> Method -> Notes.
-   The HTML uses this order directly; no fragile selector-based reparenting is needed. */
