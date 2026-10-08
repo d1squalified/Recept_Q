@@ -185,7 +185,26 @@ els.fileInput.onchange=()=>{ if(els.fileInput.files[0]) { importJSON(els.fileInp
   loadAppName();
   try{await openDB(); await render();}
   catch(e){console.error(e); alert("Din webbläsare stöder inte lokal lagring för appen.");}
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(console.error);
+  if("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js?v=3", { updateViaCache: "none" })
+      .then(registration => {
+        // Check for a new deployment whenever the app becomes visible again.
+        const checkForUpdate = () => registration.update().catch(() => {});
+        checkForUpdate();
+        document.addEventListener("visibilitychange", () => {
+          if(document.visibilityState === "visible") checkForUpdate();
+        });
+
+        // If a new worker takes control, reload once so the fresh app shell is used.
+        let reloading = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if(reloading) return;
+          reloading = true;
+          window.location.reload();
+        });
+      })
+      .catch(console.error);
+  }
 })();
 
 

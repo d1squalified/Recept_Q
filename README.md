@@ -52,3 +52,7 @@ Included:
 ## OCR note
 
 The first OCR use requires internet access so Safari can download the OCR engine and Swedish language data. Recipe data itself is never uploaded by this app. For a truly first-launch-offline OCR engine, the OCR assets can later be bundled into the app, at the cost of a much larger download.
+
+### App updates
+
+The app checks for new versions when opened and when it returns to the foreground. The service worker uses versioned caches, activates updates immediately, and removes older app caches. Recipe data in IndexedDB is separate from these caches and is not deleted by an app update.
