@@ -175,7 +175,7 @@
       <h2>Kontrollera OCR</h2>
       <button type="button" id="ocrReviewClose" class="icon">×</button>
     </div>
-    <p class="muted">Kontrollera texten. Du kan även markera delar och göra dem feta, kursiva eller understrukna efter att texten lagts in.</p>
+    <p class="muted">Jag försöker automatiskt hitta receptets namn och ingredienslista. De fylls i om fälten är tomma. Kontrollera alltid OCR-resultatet innan du sparar.</p>
     <label for="ocrText">Uppläst text</label>
     <textarea id="ocrText" rows="16"></textarea>
     <div class="editor-actions">
@@ -188,6 +188,38 @@
 
 <div id="toast" class="toast" role="status"></div>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=1.8"></script>
+
+<dialog id="sharingDialog" class="modal">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2>Dela & ta emot recept</h2>
+      <button id="sharingClose" class="icon-btn" type="button" aria-label="Stäng">×</button>
+    </div>
+    <p class="muted">JSON-filen är en fristående kopia. Din lokala samling ändras först när du bekräftar importen.</p>
+    <div class="sharing-actions">
+      <button id="shareRecipesBtn" class="primary-btn" type="button">📤 Dela recept</button>
+      <button id="receiveRecipesBtn" class="secondary-btn" type="button">📥 Ta emot recept</button>
+      <input id="importFileInput" type="file" accept=".json,application/json" hidden>
+    </div>
+    <div id="shareOptions" class="sharing-options" hidden>
+      <label for="shareScope">Vad vill du dela?</label>
+      <select id="shareScope">
+        <option value="all">Alla recept</option>
+        <option value="meal">Alla måltider</option>
+        <option value="dessert">Alla efterrätter</option>
+        <option value="selected">Välj recept</option>
+      </select>
+      <div id="shareRecipeList" class="share-recipe-list" hidden></div>
+      <button id="createShareFileBtn" class="primary-btn" type="button">Skapa delningsfil</button>
+    </div>
+    <div id="importPreview" class="import-preview" hidden></div>
+    <div id="importActions" class="import-actions" hidden>
+      <button id="importConfirmBtn" class="primary-btn" type="button">Importera</button>
+      <button id="importAsNewBtn" class="secondary-btn" type="button">Importera allt som nya</button>
+      <button id="importCancelBtn" class="text-btn" type="button">Avbryt</button>
+    </div>
+  </div>
+</dialog>
 </body>
 </html>

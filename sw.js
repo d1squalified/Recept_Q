@@ -1,4 +1,4 @@
-const CACHE = "recipe-vault-v6";
+const CACHE="recipe-vault-v1.8";
 const PREFIX = "recipe-vault-";
 const ASSETS = ["./","./index.html","./style.css","./app.js","./manifest.webmanifest"];
 self.addEventListener("install", event => event.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting())));

@@ -60,3 +60,7 @@ The first OCR use requires internet access so Safari can download the OCR engine
 ### App updates
 
 The app checks for new versions when opened and when it returns to the foreground. The service worker uses versioned caches, activates updates immediately, and removes older app caches. Recipe data in IndexedDB is separate from these caches and is not deleted by an app update.
+
+## v1.8 — safe JSON sharing
+
+Receptvalvet JSON files are portable and can be sent by AirDrop, Mail, Messages, Files, iCloud Drive, OneDrive, Google Drive or similar. The app previews incoming recipes before import, detects duplicates, avoids silently overwriting newer local recipes, and supports importing everything as new recipes.
