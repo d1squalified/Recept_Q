@@ -5,7 +5,6 @@
 .sharing-actions,.import-actions{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.primary-btn,.secondary-btn,.text-btn{border:0;border-radius:12px;padding:11px 14px;font:inherit;cursor:pointer}.primary-btn{background:#111827;color:#fff}.secondary-btn{background:#e5e7eb;color:#111827}.text-btn{background:transparent;color:#4b5563}.sharing-options{display:grid;gap:10px;margin-top:14px}.sharing-options select{padding:11px;border-radius:10px;border:1px solid #d1d5db;font:inherit}.import-preview{margin-top:14px;padding:14px;border-radius:12px;background:#f3f4f6}.import-stats{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
 
 /* v1.9 cooking methods */
-#cookingMethodFilter{margin-top:8px}
 .cooking-methods-display{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}
 .cooking-method-chip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:var(--card,#f1f1f1);font-size:.88rem}
 
@@ -15,3 +14,5 @@
 .ingredient-suggestion-row{display:flex;align-items:center;gap:8px;padding:5px 0}
 .ingredient-suggestion-row input{width:20px;height:20px}
 .ingredient-suggestion-name{flex:1}
+
+.ingredient-suggestions-help{font-size:.88rem;opacity:.75;margin-bottom:8px}

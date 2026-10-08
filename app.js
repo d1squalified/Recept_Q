@@ -180,6 +180,134 @@ function ingredientKeywordsFromRecipe(recipe){
   return [...new Set([...direct, ...suggestions].map(normalizeIngredientWord).filter(Boolean))];
 }
 
+
+/* v2.1 — OCR "Använd text" auto-field parser */
+function cleanOcrLine(s=""){
+  return s.replace(/\s+/g," ").replace(/[|¦]+/g," ").trim();
+}
+function looksLikeIngredientLine(line){
+  const l=normalizeIngredientWord(line);
+  if (!l || INGREDIENT_HEADINGS.test(line)) return false;
+  if (INGREDIENT_UNITS.test(line)) return true;
+  return SWEDISH_INGREDIENTS.some(x => new RegExp("(^|[^a-z0-9])"+normalizeIngredientWord(x).replace(/\s+/g,"\\s+")+"([^a-z0-9]|$)","i").test(l));
+}
+function parseOcrIntoRecipeFields(text=""){
+  const raw=text.split(/\r?\n/).map(cleanOcrLine).filter(Boolean);
+  if (!raw.length) return {name:"", ingredients:"", instructions:"", ingredientKeywords:[], cookingMethods:[]};
+
+  // Remove obvious OCR junk, page numbers, and very short noise.
+  const lines=raw.filter(x => !/^(?:[|•·\-–—\d]{1,4})$/.test(x));
+
+  // Title: first meaningful line, unless it is an ingredient heading/quantity line.
+  let titleIndex=lines.findIndex((x,i)=>
+    i<4 &&
+    x.length>=3 &&
+    x.length<=100 &&
+    !INGREDIENT_HEADINGS.test(x) &&
+    !looksLikeIngredientLine(x) &&
+    !/^(?:instruktioner|gör så här|tillagning|så här gör du)\s*:?\s*$/i.test(x)
+  );
+  if(titleIndex<0) titleIndex=0;
+  const name=lines[titleIndex] || "";
+
+  const ingredientStart=lines.findIndex(x=>INGREDIENT_HEADINGS.test(x));
+  const instructionStart=lines.findIndex(x=>/^(?:instruktioner|gör så här|tillagning|så här gör du|metod|tillredning)\s*:?\s*$/i.test(x));
+
+  let ingredientsLines=[];
+  let instructionLines=[];
+
+  if(ingredientStart>=0){
+    const end=instructionStart>ingredientStart ? instructionStart : Math.min(lines.length, ingredientStart+30);
+    ingredientsLines=lines.slice(ingredientStart+1,end).filter(x=>x!==name);
+    if(instructionStart>=0) instructionLines=lines.slice(instructionStart+1);
+    else instructionLines=lines.slice(end);
+  } else {
+    // No heading: collect consecutive quantity/ingredient lines after title.
+    let i=Math.max(0,titleIndex+1);
+    while(i<lines.length && ingredientsLines.length<30 && looksLikeIngredientLine(lines[i])){
+      ingredientsLines.push(lines[i]); i++;
+    }
+    instructionLines=lines.slice(i);
+  }
+
+  // If the OCR has no useful ingredient lines, build a clean ingredient list
+  // from detected candidates, while leaving the full OCR as instructions.
+  const candidates=suggestIngredientsFromOCR(lines.join("\n"));
+  if(!ingredientsLines.length && candidates.length){
+    ingredientsLines=candidates.map(x=>x.name);
+  }
+
+  // Normalize line joins so OCR doesn't concatenate separate rows.
+  ingredientsLines=ingredientsLines.map(cleanOcrLine).filter(Boolean);
+  instructionLines=instructionLines.map(cleanOcrLine).filter(Boolean);
+
+  // If instruction text is absent, retain the remaining OCR rather than losing data.
+  if(!instructionLines.length){
+    const used=new Set([name,...ingredientsLines]);
+    instructionLines=lines.filter(x=>!used.has(x));
+  }
+
+  const ingredientKeywords=[...new Set([
+    ...ingredientsLines.flatMap(x=>suggestIngredientsFromOCR(x).map(y=>normalizeIngredientWord(y.name))),
+    ...candidates.map(x=>normalizeIngredientWord(x.name))
+  ].filter(Boolean))];
+
+  return {
+    name,
+    ingredients: ingredientsLines.join("\n"),
+    instructions: instructionLines.join("\n"),
+    ingredientKeywords,
+    cookingMethods: extractCookingMethods(lines.join("\n"))
+  };
+}
+
+function applyOcrFieldsToEditor(text=""){
+  const parsed=parseOcrIntoRecipeFields(text);
+
+  const setField=(selectors,value)=>{
+    const el=document.querySelector(selectors);
+    if(!el) return false;
+    el.value=value||"";
+    el.dispatchEvent(new Event("input",{bubbles:true}));
+    el.dispatchEvent(new Event("change",{bubbles:true}));
+    return true;
+  };
+
+  setField("#name, #recipeName, input[name='name'], input[name='title']",parsed.name);
+  setField("#ingredients, #ingredientInput, textarea[name='ingredients'], input[name='ingredients']",parsed.ingredients);
+
+  // Instructions may be a textarea or contenteditable rich-text area.
+  const instr=document.querySelector("#instructions, textarea[name='instructions']");
+  if(instr){
+    instr.value=parsed.instructions||"";
+    instr.dispatchEvent(new Event("input",{bubbles:true}));
+    instr.dispatchEvent(new Event("change",{bubbles:true}));
+  }else{
+    const ce=document.querySelector("[contenteditable='true'][data-field='instructions'], #instructionsEditor, #instructions");
+    if(ce){
+      ce.innerHTML=typeof textToHtml==="function" ? textToHtml(parsed.instructions||"") : (parsed.instructions||"").split(/\n+/).map(x=>`<div>${typeof escapeHtml==="function"?escapeHtml(x):x}</div>`).join("");
+      ce.dispatchEvent(new Event("input",{bubbles:true}));
+    }
+  }
+
+  // If the app has current draft state, update common global draft objects too.
+  try{
+    if(window.currentRecipe){
+      window.currentRecipe.name=parsed.name;
+      window.currentRecipe.ingredients=parsed.ingredients;
+      window.currentRecipe.instructions=parsed.instructions;
+      window.currentRecipe.ingredientKeywords=parsed.ingredientKeywords;
+      window.currentRecipe.cookingMethods=parsed.cookingMethods;
+    }
+  }catch(e){}
+
+  // Keep suggestions visible so the user can see what was recognized.
+  if(typeof renderIngredientSuggestions==="function"){
+    renderIngredientSuggestions(text);
+  }
+  return parsed;
+}
+
 const DB_NAME = "recipe-vault";
 const DB_VERSION = 1;
 const STORE = "recipes";
@@ -484,29 +612,7 @@ function rv8Wire(){
     const b=document.createElement("button");b.id="rv8SharingOpenBtn";b.type="button";b.className="icon-btn";b.title="Dela & ta emot recept";b.setAttribute("aria-label","Dela & ta emot recept");b.textContent="⇄";menu.parentElement?.insertBefore(b,menu.nextSibling);b.addEventListener("click",rv8Open);
   }
 }
-document.addEventListener("DOMContentLoaded",()=>setTimeout(rv8Wire,0));
-
-/* v1.9-cooking-filter */
-document.addEventListener("DOMContentLoaded", ()=>{
-  const filter = document.getElementById("cookingMethodFilter");
-  if (!filter) return;
-  filter.addEventListener("change", ()=>{
-    const wanted = filter.value;
-    const list = Array.isArray(window.recipes) ? window.recipes : [];
-    const filtered = wanted ? list.filter(r => recipeCookingMethods(r).includes(wanted)) : list;
-    if (typeof renderRecipes === "function") renderRecipes(filtered);
-    else if (typeof renderRecipeList === "function") renderRecipeList(filtered);
-  });
-});
-function updateCookingMethodDisplay(recipe){
-  const el = document.getElementById("cooking-methods-display");
-  if (!el) return;
-  const labels = cookingMethodLabels(recipeCookingMethods(recipe));
-  el.innerHTML = labels.map(x => `<span class="cooking-method-chip">${typeof escapeHtml==="function"?escapeHtml(x):x}</span>`).join("");
-}
-
-
-/* v2.0 ingredient suggestion UI */
+document.addEventListener("DOMContentLoaded",()=>setTimeout(rv8Wire,0));/* v2.0 ingredient suggestion UI */
 function renderIngredientSuggestions(text){
   const box = document.getElementById("ingredientSuggestions");
   const list = document.getElementById("ingredientSuggestionsList");
@@ -550,4 +656,48 @@ document.addEventListener("DOMContentLoaded", ()=>{
     ocr.addEventListener("input", refresh);
     refresh();
   }
+});
+
+
+/* v2.1 — intercept OCR "Använd text" action and populate fields */
+document.addEventListener("click",(ev)=>{
+  const el=ev.target.closest("button, [role='button']");
+  if(!el) return;
+  const label=(el.textContent||"").trim().toLocaleLowerCase("sv-SE");
+  if(!/använd\s+text|use\s+text/.test(label)) return;
+
+  // Find OCR text from the visible OCR textarea/panel.
+  const ocr=document.querySelector("#ocrText, textarea[name='ocrText'], #ocrOutput, textarea[id*='ocr' i]");
+  const text=ocr?.value || window.lastOcrText || "";
+  if(!text.trim()) return;
+
+  // Let the existing handler run first, then populate the final editor fields.
+  setTimeout(()=>applyOcrFieldsToEditor(text),80);
+});
+
+
+/* v2.2 — new recipe field order */
+function reorderRecipeEditorFields(){
+  const root=document.querySelector("#recipeEditor, #recipeForm, #editorDialog, #editDialog, form");
+  if(!root) return;
+  const find=(selectors)=>{
+    for(const s of selectors){
+      const el=root.querySelector(s);
+      if(el) return el.closest(".field,.form-group,.form-field,.editor-field") || el.parentElement;
+    }
+    return null;
+  };
+  const image=find(["#photoPreview","#imagePreview","input[type='file']","#ocrButton"]);
+  const name=find(["#name","#recipeName","input[name='name']","input[name='title']"]);
+  const ingredients=find(["#ingredients","textarea[name='ingredients']"]);
+  const method=find(["#instructions","textarea[name='instructions']","#instructionsEditor"]);
+  const notes=find(["#notes","textarea[name='notes']"]);
+  const blocks=[image,name,ingredients,method,notes].filter(Boolean);
+  if(blocks.length<3) return;
+  const anchor=blocks[0];
+  const parent=anchor.parentElement;
+  blocks.forEach(b=>parent.appendChild(b));
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  reorderRecipeEditorFields();
 });
