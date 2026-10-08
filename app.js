@@ -252,12 +252,16 @@ function parseOcrIntoRecipeFields(text=""){
     ...candidates.map(x=>normalizeIngredientWord(x.name))
   ].filter(Boolean))];
 
+  // IMPORTANT: never discard OCR text. The complete normalized OCR stays in
+  // Metod so the user can correct the recipe without retyping missing parts.
+  const fullOcrText = lines.join("\n");
+
   return {
     name,
     ingredients: ingredientsLines.join("\n"),
-    instructions: instructionLines.join("\n"),
+    instructions: fullOcrText,
     ingredientKeywords,
-    cookingMethods: extractCookingMethods(lines.join("\n"))
+    cookingMethods: extractCookingMethods(fullOcrText)
   };
 }
 
@@ -545,7 +549,26 @@ els.ocrBtn.onclick=async()=>{
   finally{els.ocrBtn.disabled=false;}
 };
 function closeOCRReview(){if(els.ocrReview.open)els.ocrReview.close();}els.ocrReviewClose.onclick=closeOCRReview;els.ocrReviewCancel.onclick=closeOCRReview;
-els.ocrReviewForm.onsubmit=e=>{e.preventDefault();const text=els.ocrText.value.trim();if(!text)return;const detectedTitle=els.ocrReview.dataset.detectedTitle||'';const detectedIngredients=els.ocrReview.dataset.detectedIngredients||'';const detectedInstructions=els.ocrReview.dataset.detectedInstructions||'';if(!els.title.value.trim()&&detectedTitle)els.title.value=detectedTitle;if(!editorHasContent(els.ingredientsEditor)&&detectedIngredients)setEditorHtml(els.ingredientsEditor,detectedIngredients);const instructionSource=detectedInstructions||text;const html=ocrToHtml(instructionSource);const existing=getEditorHtml(els.instructionsEditor);els.instructionsEditor.innerHTML=existing?existing+`<div><br></div>`+html:html;closeOCRReview();els.ocrStatus.textContent='OCR-text infogad. Titel och ingredienser fylldes i där de kunde identifieras. Kontrollera texten och spara.';toast('OCR-text infogad');};
+els.ocrReviewForm.onsubmit=e=>{
+  e.preventDefault();
+  const text=els.ocrText.value.trim();
+  if(!text)return;
+
+  // Keep the entire OCR text in Metod. Ingredient recognition is additive: it
+  // fills the Ingredients field, but never removes anything from the OCR text.
+  const parsed=parseOcrIntoRecipeFields(text);
+  if(!els.title.value.trim()&&parsed.name)els.title.value=parsed.name;
+  if(!editorHasContent(els.ingredientsEditor)&&parsed.ingredients)setEditorHtml(els.ingredientsEditor,parsed.ingredients);
+
+  // Always replace the Method field with the complete OCR result so no recipe
+  // lines are silently lost and the user can clean it up manually.
+  els.instructionsEditor.innerHTML=ocrToHtml(parsed.instructions||text);
+  els.instructionsEditor.dispatchEvent(new Event('input',{bubbles:true}));
+
+  closeOCRReview();
+  els.ocrStatus.textContent='Hela OCR-texten sparades i Metod. Titel och ingredienser fylldes i där de kunde identifieras. Kontrollera och spara.';
+  toast('OCR-text infogad');
+};
 
 
 /* v1.8 safe JSON sharing */
@@ -676,28 +699,6 @@ document.addEventListener("click",(ev)=>{
 });
 
 
-/* v2.2 — new recipe field order */
-function reorderRecipeEditorFields(){
-  const root=document.querySelector("#recipeEditor, #recipeForm, #editorDialog, #editDialog, form");
-  if(!root) return;
-  const find=(selectors)=>{
-    for(const s of selectors){
-      const el=root.querySelector(s);
-      if(el) return el.closest(".field,.form-group,.form-field,.editor-field") || el.parentElement;
-    }
-    return null;
-  };
-  const image=find(["#photoPreview","#imagePreview","input[type='file']","#ocrButton"]);
-  const name=find(["#name","#recipeName","input[name='name']","input[name='title']"]);
-  const ingredients=find(["#ingredients","textarea[name='ingredients']"]);
-  const method=find(["#instructions","textarea[name='instructions']","#instructionsEditor"]);
-  const notes=find(["#notes","textarea[name='notes']"]);
-  const blocks=[image,name,ingredients,method,notes].filter(Boolean);
-  if(blocks.length<3) return;
-  const anchor=blocks[0];
-  const parent=anchor.parentElement;
-  blocks.forEach(b=>parent.appendChild(b));
-}
-document.addEventListener("DOMContentLoaded",()=>{
-  reorderRecipeEditorFields();
-});
+/* v2.3 — explicit New Recipe field order
+   Photo/OCR -> Name -> Type -> Ingredients -> Method -> Notes.
+   The HTML uses this order directly; no fragile selector-based reparenting is needed. */

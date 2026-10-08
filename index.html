@@ -73,15 +73,6 @@
       <button type="button" id="closeBtn" class="icon">×</button>
     </div>
 
-    <label for="title">Namn</label>
-    <input id="title" required maxlength="200" placeholder="Köttbullar">
-
-    <label for="recipeType">Typ</label>
-    <select id="recipeType">
-      <option value="måltid">Måltid</option>
-      <option value="efterrätt">Efterrätt</option>
-    </select>
-
     <label>Foto / OCR</label>
     <div class="ocr-row">
       <input id="recipePhoto" type="file" accept="image/*" capture="environment" hidden>
@@ -98,6 +89,15 @@
     </div>
     <small id="ocrStatus" class="muted">Ta ett tydligt foto. Rak bild och bra ljus ger bäst resultat.</small>
 
+    <label for="title">Namn</label>
+    <input id="title" required maxlength="200" placeholder="Köttbullar">
+
+    <label for="recipeType">Typ</label>
+    <select id="recipeType">
+      <option value="måltid">Måltid</option>
+      <option value="efterrätt">Efterrätt</option>
+    </select>
+
     <label>Ingredienser</label>
     <div class="rich-editor" data-placeholder="500 g färs&#10;1 ägg&#10;1 dl ströbröd">
       <div class="toolbar" data-target="ingredientsEditor">
@@ -112,7 +112,7 @@
       <div id="ingredientsEditor" class="rich-input" contenteditable="true" role="textbox" aria-label="Ingredienser"></div>
     </div>
 
-    <label>Gör så här</label>
+    <label>Metod</label>
     <div class="rich-editor">
       <div class="toolbar" data-target="instructionsEditor">
         <button type="button" data-cmd="bold"><b>B</b></button>
@@ -123,7 +123,7 @@
         <button type="button" data-cmd="formatBlock" data-value="h4">Rubrik</button>
         <button type="button" data-cmd="removeFormat">Rensa</button>
       </div>
-      <div id="instructionsEditor" class="rich-input tall" contenteditable="true" role="textbox" aria-label="Gör så här"></div>
+      <div id="instructionsEditor" class="rich-input tall" contenteditable="true" role="textbox" aria-label="Metod"></div>
     </div>
 
     <label>Anteckningar</label>
