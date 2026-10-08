@@ -591,8 +591,18 @@ els.ocrBtn.onclick=async()=>{
   finally{els.ocrBtn.disabled=false;}
 };
 function closeOCRReview(){if(els.ocrReview.open)els.ocrReview.close();}els.ocrReviewClose.onclick=closeOCRReview;els.ocrReviewCancel.onclick=closeOCRReview;
-els.ocrReviewForm.onsubmit=e=>{e.preventDefault();const text=els.ocrText.value.trim();if(!text)return;const detectedTitle=els.ocrReview.dataset.detectedTitle||'';const detectedIngredients=els.ocrReview.dataset.detectedIngredients||'';const detectedInstructions=els.ocrReview.dataset.detectedInstructions||'';if(!els.title.value.trim()&&detectedTitle)els.title.value=detectedTitle;if(!editorHasContent(els.ingredientsEditor)&&detectedIngredients)setEditorHtml(els.ingredientsEditor,detectedIngredients);setEditorHtml(els.instructionsEditor,text);closeOCRReview();els.ocrStatus.textContent='OCR-text infogad. Titel och ingredienser fylldes i där de kunde identifieras, och hela OCR-texten sparades i Metod.';toast('OCR-text infogad');};
-
+els.ocrReviewForm.onsubmit = e => {
+  e.preventDefault();
+  const text = els.ocrText.value.trim(); if (!text) return;
+  const ds = els.ocrReview.dataset;
+  if (!els.title.value.trim() && ds.detectedTitle) els.title.value = ds.detectedTitle;
+  if (!editorHasContent(els.ingredientsEditor) && ds.detectedIngredients)
+    setEditorHtml(els.ingredientsEditor, ds.detectedIngredients);
+  setEditorHtml(els.instructionsEditor, ds.detectedInstructions || text);
+  if (!editorHasContent(els.notesEditor)) setEditorHtml(els.notesEditor, 'OCR-original:\n' + text);
+  closeOCRReview();
+  toast('OCR-text infogad');
+};
 
 /* v1.8 safe JSON sharing */
 const RV8_FORMAT="recipe-vault", RV8_VERSION=2;
