@@ -43,23 +43,7 @@ Included:
 - JSON import/merge
 - Offline PWA cache
 - Camera/photo input directly from **Nytt recept**
-- Image preview before OCR
-- Rotate image left/right before OCR
-- Swedish OCR using Tesseract.js in the browser
-- OCR review/edit screen before text is inserted into a recipe
-- OCR text cleanup for common line-spacing artifacts
-- Recipe type: Måltid or Efterrätt
-- Quick type filters in the search area
-- Rich text formatting: bold, italic, underline, headings and lists
-- OCR image preprocessing for contrast/greyscale and improved page segmentation
 
-## OCR note
-
-The first OCR use requires internet access so Safari can download the OCR engine and Swedish language data. Recipe data itself is never uploaded by this app. For a truly first-launch-offline OCR engine, the OCR assets can later be bundled into the app, at the cost of a much larger download.
-
-### App updates
-
-The app checks for new versions when opened and when it returns to the foreground. The service worker uses versioned caches, activates updates immediately, and removes older app caches. Recipe data in IndexedDB is separate from these caches and is not deleted by an app update.
 
 ## v1.8 — safe JSON sharing
 
@@ -71,4 +55,3 @@ Automatisk identifiering och sökning av tillagningsmetoder som ugn, fritera, st
 
 
 ### v2.0 – Ingrediensigenkänning
-OCR can suggest likely Swedish recipe ingredients locally. Suggestions are reviewable with checkboxes before being added to the ingredient field. Ingredient keywords are also used for search, while cooking-method recognition from v1.9 remains available.
