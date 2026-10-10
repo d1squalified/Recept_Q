@@ -49,6 +49,7 @@ const DB_NAME = "recipe-vault";
 const DB_VERSION = 1;
 const STORE = "recipes";
 let db, editingId = null, viewingId = null, activeFilter = "all";
+let viewerWakeLock = null, viewerWakeLockWanted = false;
 const APP_NAME_KEY = "recipe-vault-app-name";
 
 const $ = id => document.getElementById(id);
@@ -57,7 +58,7 @@ const els = {
   title:$('title'), recipeType:$('recipeType'), ingredientsEditor:$('ingredientsEditor'), instructionsEditor:$('instructionsEditor'), notesEditor:$('notesEditor'),
   deleteBtn:$('deleteBtn'), editorTitle:$('editorTitle'), toast:$('toast'), fileInput:$('fileInput'),
   backupDialog:$('backupDialog'), backupClose:$('backupClose'), viewer:$('viewer'), viewerTitle:$('viewerTitle'), viewerType:$('viewerType'),
-  viewerIngredients:$('viewerIngredients'), viewerInstructions:$('viewerInstructions'), viewerNotes:$('viewerNotes'), viewerNotesWrap:$('viewerNotesWrap'), viewerClose:$('viewerClose'), viewerEdit:$('viewerEdit'),
+  viewerIngredients:$('viewerIngredients'), viewerInstructions:$('viewerInstructions'), viewerNotes:$('viewerNotes'), viewerNotesWrap:$('viewerNotesWrap'), viewerClose:$('viewerClose'), viewerEdit:$('viewerEdit'), wakeLockStatus:$('wakeLockStatus'),
   appName:$('appName'), appNameInput:$('appNameInput'), saveAppName:$('saveAppName'), newBtn:$('newBtn'), emptyNew:$('emptyNew'), closeBtn:$('closeBtn'), cancelBtn:$('cancelBtn'),
   menuBtn:$('menuBtn'), exportBtn:$('exportBtn'), importBtn:$('importBtn')
 };
@@ -128,8 +129,40 @@ function openViewer(r){
   els.viewerInstructions.innerHTML=sanitizeHtml(legacyToHtml(r?.instructions||''))||'—';
   els.viewerNotes.innerHTML=sanitizeHtml(legacyToHtml(r?.notes||'')); els.viewerNotesWrap.classList.toggle('hidden',!r?.notes);
   els.viewer.showModal();
+  viewerWakeLockWanted = true;
+  requestViewerWakeLock();
 }
-function closeViewer(){if(els.viewer.open)els.viewer.close();viewingId=null;}
+async function requestViewerWakeLock(){
+  if(!viewerWakeLockWanted || !els.viewer.open) return;
+  if(!('wakeLock' in navigator)){
+    els.wakeLockStatus.textContent='Den här webbläsaren stöder inte skärmlås-skydd. Du kan behöva ändra skärmens autolås i enhetens inställningar.';
+    return;
+  }
+  if(document.visibilityState!=='visible') return;
+  if(viewerWakeLock) return;
+  try{
+    const lock=await navigator.wakeLock.request('screen');
+    if(!viewerWakeLockWanted || !els.viewer.open){await lock.release();return;}
+    viewerWakeLock=lock;
+    els.wakeLockStatus.textContent='☀ Skärmen hålls vaken medan receptet är öppet.';
+    lock.addEventListener('release',()=>{
+      if(viewerWakeLock===lock) viewerWakeLock=null;
+      if(viewerWakeLockWanted && els.viewer.open && document.visibilityState==='visible'){
+        els.wakeLockStatus.textContent='Skärmskyddet släpptes av enheten. Försöker aktivera igen…';
+        requestViewerWakeLock();
+      }
+    },{once:true});
+  }catch(error){
+    viewerWakeLock=null;
+    els.wakeLockStatus.textContent='Kunde inte hindra skärmen från att släckas. Kontrollera webbläsarens stöd och enhetens autolåsinställning.';
+  }
+}
+function releaseViewerWakeLock(){
+  viewerWakeLockWanted=false;
+  const lock=viewerWakeLock; viewerWakeLock=null;
+  if(lock) lock.release().catch(()=>{});
+}
+function closeViewer(){if(els.viewer.open)els.viewer.close();releaseViewerWakeLock();viewingId=null;}
 function openEditor(r=null){
   editingId=r?.id||null; els.editorTitle.textContent=r?'Redigera recept':'Nytt recept'; els.title.value=r?.title||''; els.recipeType.value=r?.type||'måltid';
   setEditorHtml(els.ingredientsEditor,r?.ingredients||''); setEditorHtml(els.instructionsEditor,r?.instructions||''); setEditorHtml(els.notesEditor,r?.notes||'');
@@ -150,6 +183,8 @@ async function exportJSON(){const recipes=await allRecipes();const payload={form
 async function importJSON(file){try{const data=JSON.parse(await file.text()),incoming=Array.isArray(data)?data:data.recipes;if(!Array.isArray(incoming))throw new Error('Ogiltig fil');let count=0;for(const r of incoming){if(!r||typeof r!=='object'||!r.id)continue;await putRecipe({id:String(r.id),title:String(r.title||''),type:r.type==='efterrätt'?'efterrätt':'måltid',ingredients:String(r.ingredients||''),instructions:String(r.instructions||''),notes:String(r.notes||''),created:r.created||new Date().toISOString(),modified:r.modified||r.created||new Date().toISOString()});count++;}await render();toast(`${count} recept importerade`);}catch(e){console.error(e);alert('Kunde inte importera filen. Kontrollera att det är en Recipe Vault JSON-backup.');}}
 
 els.newBtn.onclick=()=>openEditor(null); els.emptyNew.onclick=()=>openEditor(null); els.viewerClose.onclick=closeViewer;
+els.viewer.addEventListener('close',()=>{releaseViewerWakeLock();viewingId=null;});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible' && els.viewer.open && viewerWakeLockWanted && !viewerWakeLock) requestViewerWakeLock();});
 els.viewerEdit.onclick=async()=>{const id=viewingId;closeViewer();if(id){const r=(await allRecipes()).find(x=>x.id===id);if(r)openEditor(r,false);}};
 els.closeBtn.onclick=closeEditor;els.cancelBtn.onclick=closeEditor;els.form.onsubmit=e=>{e.preventDefault();saveCurrent()};
 els.deleteBtn.onclick=async()=>{if(editingId&&confirm('Radera receptet?')){await deleteRecipe(editingId);closeEditor();render();toast('Recept raderat');}};

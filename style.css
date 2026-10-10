@@ -7,3 +7,43 @@
 /* v1.9 cooking methods */
 .cooking-methods-display{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}
 .cooking-method-chip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:var(--card,#f1f1f1);font-size:.88rem}
+
+
+/* Consistent recipe text fields: ignore pasted website colors/fonts. */
+:root { color-scheme: light; }
+input, textarea, select,
+.rich-editor, .rich-input,
+[contenteditable="true"],
+#ingredientsEditor, #instructionsEditor, #notesEditor {
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 400;
+  line-height: 1.55;
+  color: #000 !important;
+  background-color: #fff !important;
+  caret-color: #000;
+  -webkit-text-fill-color: #000;
+}
+input::placeholder, textarea::placeholder,
+.rich-input:empty:before {
+  color: #777 !important;
+  -webkit-text-fill-color: #777;
+  opacity: 1;
+}
+.rich-input *, .rich-input span, .rich-input font,
+.rich-input div, .rich-input p, .rich-input li,
+[contenteditable="true"] *, [contenteditable="true"] span,
+[contenteditable="true"] font, [contenteditable="true"] div,
+[contenteditable="true"] p, [contenteditable="true"] li {
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: 16px !important;
+  color: #000 !important;
+  background-color: transparent !important;
+  -webkit-text-fill-color: #000 !important;
+}
+.rich-editor { border-color: #cbd5e1; }
+.rich-input { min-height: 150px; padding: 12px; }
+.rich-input.tall { min-height: 210px; }
+.notes-input { min-height: 110px; }
+
+.wake-lock-status{margin:18px 0 0;color:var(--muted);font-size:13px;line-height:1.4}
